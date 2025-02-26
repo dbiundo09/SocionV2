@@ -8,7 +8,7 @@ export default function Index() {
     <View style={styles.container}>
       <CustomImage source={SIG} scale={.5} />
       <Link href="/home" style={styles.button}>
-        Go to About screen
+        Go to Home screen
       </Link>
       <Link href="/register" style={styles.button}>
         Go to Register screen
