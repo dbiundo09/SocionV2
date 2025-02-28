@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Text, View, StyleSheet, TouchableOpacity, FlatList, useColorScheme } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-
+ import auth from '@react-native-firebase/auth';
 // Customize these colors to match your index page
 const DARK_MODE_BACKGROUND = 'rgb(41, 44, 47)';  // Replace this with your index page background color
 
@@ -32,30 +32,42 @@ const initialDailies = [
   { id: '4', title: 'Gratitude', subtitle: 'Supporting line text lorem ipsum dolor sit amet, consectetur.', completed: false },
 ];
 
+interface Daily {
+  id: string;
+  title: string;
+  subtitle: string;
+  completed: boolean;
+}
+
+type RootStackParamList = {
+  DailyDetail: { title: string };
+  AccountInfo: undefined;  // undefined means no params required
+};
+
 export default function HomeScreen() {
-  const navigation = useNavigation();
-  const [dailies, setDailies] = useState(initialDailies);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const [dailies, setDailies] = useState<Daily[]>(initialDailies);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const activeTheme = isDarkMode ? theme.dark : theme.light;
 
-  const toggleCompletion = (id) => {
+  const toggleCompletion = (id: string) => {
     setDailies(dailies.map(daily => 
       daily.id === id ? { ...daily, completed: !daily.completed } : daily
     ));
   };
 
-  const renderDaily = ({ item }) => (
+  const renderDaily = (props: { item: Daily }) => (
     <View style={[styles.dailyItem, { backgroundColor: activeTheme.cardBackground }]}>
       <TouchableOpacity
         style={styles.dailyTextContainer}
-        onPress={() => navigation.navigate('DailyDetail', { title: item.title })}
+        onPress={() => navigation.navigate('DailyDetail', { title: props.item.title })}
       >
-        <Text style={[styles.dailyTitle, { color: activeTheme.text }]}>{item.title}</Text>
-        <Text style={[styles.dailySubtitle, { color: activeTheme.subtitleText }]}>{item.subtitle}</Text>
+        <Text style={[styles.dailyTitle, { color: activeTheme.text }]}>{props.item.title}</Text>
+        <Text style={[styles.dailySubtitle, { color: activeTheme.subtitleText }]}>{props.item.subtitle}</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => toggleCompletion(item.id)}>
+      <TouchableOpacity onPress={() => toggleCompletion(props.item.id)}>
         <Ionicons
-          name={item.completed ? 'checkbox' : 'square-outline'}
+          name={props.item.completed ? 'checkbox' : 'square-outline'}
           size={24}
           color={activeTheme.text}
         />
@@ -74,6 +86,13 @@ export default function HomeScreen() {
           >
             <Ionicons 
               name={isDarkMode ? 'sunny-outline' : 'moon-outline'} 
+              size={24} 
+              color={activeTheme.text} 
+            />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.signOutButton} onPress={() => auth().signOut()} >
+            <Ionicons 
+              name="log-out-outline" 
               size={24} 
               color={activeTheme.text} 
             />
@@ -129,6 +148,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   themeToggle: {
+    marginRight: 8,
+  },
+  signOutButton: {
     marginRight: 8,
   },
   trackingContainer: {

@@ -1,8 +1,18 @@
-import { Image, StyleSheet, Dimensions } from 'react-native';
+import { Image, StyleSheet, Dimensions, ImageSourcePropType } from 'react-native';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-export default function CustomImage({ source, scale = 1, resizeMode = 'contain' }) {
+interface CustomImageProps {
+  source: ImageSourcePropType;
+  scale?: number;
+  resizeMode?: 'contain' | 'cover' | 'stretch' | 'center';
+}
+
+export default function CustomImage({ 
+  source, 
+  scale = 1, 
+  resizeMode = 'contain' 
+}: CustomImageProps) {
   return (
     <Image
       source={source}
