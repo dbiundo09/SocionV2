@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "1053555661405",
+    "project_id": "socionv2",
+    "storage_bucket": "socionv2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1053555661405:android:cc41dcb6f9c6f81d274bb4",
+        "android_client_info": {
+          "package_name": "com.socionv2.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1053555661405-3dv8fe6lhsvrju4bjol4vr4pt8tfn27j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.socionv2.app",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "1053555661405-m80q21rbjpd5h70qqsj0ctrlpj280n1e.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlj0c207RY30OD1QmTyFPxncc9FsVN7J4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1053555661405-m80q21rbjpd5h70qqsj0ctrlpj280n1e.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1053555661405-l23661mf8tmhf3dt1k3d2gv2cu0f1dug.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.socionv2app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
