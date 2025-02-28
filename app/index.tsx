@@ -59,6 +59,7 @@ export default function Index() {
     });
   }, []);
 
+
   const animateTransition = (mode: 'none' | 'signin' | 'signup') => {
     Animated.parallel([
       Animated.timing(fadeAnimation, {

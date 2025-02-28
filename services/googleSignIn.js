@@ -5,6 +5,8 @@ import {
 import auth from '@react-native-firebase/auth';
 
 const signIn = async () => {
+    
+
     try {
         // Check if your device supports Google Play
         await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });

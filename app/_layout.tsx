@@ -21,7 +21,7 @@ export default function RootLayout() {
 
 
     if (user && !inAuthGroup) {
-      router.replace('/auth/home');
+      router.replace('/auth/classes');
     } else if (!user && inAuthGroup) {
       router.replace('/');
     }

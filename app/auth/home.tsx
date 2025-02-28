@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Text, View, StyleSheet, TouchableOpacity, FlatList, useColorScheme } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
- import auth from '@react-native-firebase/auth';
+import { useRouter } from 'expo-router';
+import auth from '@react-native-firebase/auth';
 // Customize these colors to match your index page
 const DARK_MODE_BACKGROUND = 'rgb(41, 44, 47)';  // Replace this with your index page background color
 
@@ -46,6 +47,7 @@ type RootStackParamList = {
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const router = useRouter();
   const [dailies, setDailies] = useState<Daily[]>(initialDailies);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const activeTheme = isDarkMode ? theme.dark : theme.light;
@@ -78,7 +80,17 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: activeTheme.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.headerText, { color: activeTheme.text }]}>om</Text>
+        <TouchableOpacity 
+          onPress={() => router.push('/auth/classes')}
+          style={styles.backButton}
+        >
+          <Ionicons 
+            name="arrow-back" 
+            size={24} 
+            color={activeTheme.text} 
+          />
+        </TouchableOpacity>
+        <Text style={[styles.headerText, { color: activeTheme.text }]}>Home</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity 
             style={styles.themeToggle} 
@@ -131,12 +143,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    paddingTop: 48,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 24,
   },
   headerRight: {
     flexDirection: 'row',
@@ -206,5 +219,8 @@ const styles = StyleSheet.create({
   dailySubtitle: {
     fontSize: 14,
     color: '#666',
+  },
+  backButton: {
+    marginRight: 16,
   },
 });
