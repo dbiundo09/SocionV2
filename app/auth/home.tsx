@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Text, View, StyleSheet, TouchableOpacity, FlatList, useColorScheme } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import auth from '@react-native-firebase/auth';
-// Customize these colors to match your index page
-const DARK_MODE_BACKGROUND = 'rgb(41, 44, 47)';  // Replace this with your index page background color
+
+
+
+const DARK_MODE_BACKGROUND = 'rgb(41, 44, 47)';
 
 const theme = {
   light: {
@@ -51,6 +53,7 @@ export default function HomeScreen() {
   const [dailies, setDailies] = useState<Daily[]>(initialDailies);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const activeTheme = isDarkMode ? theme.dark : theme.light;
+
 
   const toggleCompletion = (id: string) => {
     setDailies(dailies.map(daily => 

@@ -3,9 +3,9 @@ import {
     statusCodes,
 } from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
+import postSignIn from '../userServices/postSignIn';
 
 const signIn = async () => {
-    
 
     try {
         // Check if your device supports Google Play
@@ -23,23 +23,22 @@ const signIn = async () => {
             throw new Error('No ID token found');
         }
 
-        // Create a Google credential with the token
         const googleCredential = auth.GoogleAuthProvider.credential(signInResult.data.idToken);
 
-        // Sign-in the user with the credential
+
         console.log("Signing in with credential");
-        return auth().signInWithCredential(googleCredential);
+        await auth().signInWithCredential(googleCredential);
+        await postSignIn();
     } catch (error) {
         if (isErrorWithCode(error)) {
             switch (error.code) {
                 case statusCodes.IN_PROGRESS:
-                    // operation (eg. sign in) already in progress
+
                     break;
                 case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-                    // Android only, play services not available or outdated
+
                     break;
                 default:
-                // some other error happened
             }
         } else {
             console.log(error);

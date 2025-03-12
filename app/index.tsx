@@ -13,8 +13,9 @@ import {
 } from 'react-native';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from '@react-native-firebase/auth';
 import { GoogleSigninButton, GoogleSignin } from '@react-native-google-signin/google-signin';
-import signInWithGoogle from '../services/googleSignIn';
-import signIn from '../services/googleSignIn';
+import signInWithGoogle from '../services/authServices/googleSignIn';
+import signIn from '../services/authServices/googleSignIn';
+import postSignIn from '../services/userServices/postSignIn';
 
 interface AuthError {
   code: string;
@@ -106,6 +107,7 @@ export default function Index() {
       } else {
         await createUserWithEmailAndPassword(getAuth(), email, password);
       }
+      await postSignIn();
     } catch (error: any) {
       const readableError = getReadableError(error);
       Alert.alert(

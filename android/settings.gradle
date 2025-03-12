@@ -21,7 +21,7 @@ extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
   }
 }
 
-rootProject.name = 'socionv2'
+rootProject.name = 'Socion'
 
 dependencyResolutionManagement {
   versionCatalogs {
