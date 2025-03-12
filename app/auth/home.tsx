@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Text, View, StyleSheet, TouchableOpacity, FlatList, useColorScheme } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, Link } from 'expo-router';
 import auth from '@react-native-firebase/auth';
 // Customize these colors to match your index page
 const DARK_MODE_BACKGROUND = 'rgb(41, 44, 47)';  // Replace this with your index page background color
@@ -135,6 +135,9 @@ export default function HomeScreen() {
         renderItem={renderDaily}
         keyExtractor={item => item.id}
       />
+      <Link href="/auth/exercise-details" style={styles.link}>
+        <Text style={styles.linkText}>View Class Details</Text>
+      </Link>
     </View>
   );
 }
@@ -222,5 +225,16 @@ const styles = StyleSheet.create({
   },
   backButton: {
     marginRight: 16,
+  },
+  link: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  linkText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
 });
