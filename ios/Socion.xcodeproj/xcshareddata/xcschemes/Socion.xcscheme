@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "socionv2.app"
-               BlueprintName = "socionv2"
-               ReferencedContainer = "container:socionv2.xcodeproj">
+               BuildableName = "Socion.app"
+               BlueprintName = "Socion"
+               ReferencedContainer = "container:Socion.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "socionv2Tests.xctest"
-               BlueprintName = "socionv2Tests"
-               ReferencedContainer = "container:socionv2.xcodeproj">
+               BuildableName = "SocionTests.xctest"
+               BlueprintName = "SocionTests"
+               ReferencedContainer = "container:Socion.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "socionv2.app"
-            BlueprintName = "socionv2"
-            ReferencedContainer = "container:socionv2.xcodeproj">
+            BuildableName = "Socion.app"
+            BlueprintName = "Socion"
+            ReferencedContainer = "container:Socion.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "socionv2.app"
-            BlueprintName = "socionv2"
-            ReferencedContainer = "container:socionv2.xcodeproj">
+            BuildableName = "Socion.app"
+            BlueprintName = "Socion"
+            ReferencedContainer = "container:Socion.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
