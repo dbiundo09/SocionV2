@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Text, 
   View, 
@@ -6,91 +6,257 @@ import {
   TouchableOpacity, 
   ScrollView, 
   ImageBackground,
-  Dimensions 
+  ActivityIndicator,
+  Animated,
+  TextInput,
+  Alert,
+  Keyboard
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-
-const SAMPLE_CLASSES = [
-  {
-    id: '1',
-    name: 'Meditation with Jason',
-    instructor: 'Jason',
-    time: 'Daily • 7:00 AM',
-    image: 'https://images.unsplash.com/photo-1545389336-cf090694435e'
-  },
-  {
-    id: '2',
-    name: 'Mindful Movement',
-    instructor: 'Michael Chen',
-    time: 'Mon, Wed, Fri • 9:00 AM',
-    image: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773'
-  },
-  {
-    id: '3',
-    name: 'Evening Relaxation',
-    instructor: 'Emma Williams',
-    time: 'Daily • 8:00 PM',
-    image: 'https://images.unsplash.com/photo-1528715471579-d1bcf0ba5e83'
-  },
-  {
-    id: '4',
-    name: 'Breathing Techniques',
-    instructor: 'David Miller',
-    time: 'Tue, Thu • 3:00 PM',
-    image: 'https://images.unsplash.com/photo-1545389336-cf090694435e'
-  },
-  {
-    id: '5',
-    name: 'Breathing Techniques',
-    instructor: 'David Miller',
-    time: 'Tue, Thu • 3:00 PM',
-    image: 'https://images.unsplash.com/photo-1545389336-cf090694435e'
-  },
-];
+import getUserClasses from '../../services/userServices/getClasses';
+import { ClassItem } from '../types/class';
+import joinClass from '../../services/userServices/joinClass';
 
 export default function ClassesScreen() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [ownedClasses, setOwnedClasses] = useState<ClassItem[]>([]);
+  const [enrolledClasses, setEnrolledClasses] = useState<ClassItem[]>([]);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const menuAnimation = React.useRef(new Animated.Value(0)).current;
+  const [joinDialogVisible, setJoinDialogVisible] = useState(false);
+  const [classCode, setClassCode] = useState('');
+  const [joining, setJoining] = useState(false);
+
+  useEffect(() => {
+    fetchClasses();
+  }, []);
+
+  const fetchClasses = async () => {
+    try {
+      setLoading(true);
+      const response = await getUserClasses();
+      setOwnedClasses(response.ownedClasses || []);
+      setEnrolledClasses(response.classes || []);
+    } catch (error) {
+      console.error('Error fetching classes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleMenu = () => {
+    const toValue = menuVisible ? 0 : 1;
+    Animated.spring(menuAnimation, {
+      toValue,
+      useNativeDriver: true,
+    }).start();
+    setMenuVisible(!menuVisible);
+  };
+ 
+  const handleJoinClass = async () => {
+    console.log("classCode:", classCode);
+    Keyboard.dismiss();
+    if (!classCode.trim()) {
+      Alert.alert('Error', 'Please enter a class code');
+      return;
+    }
+
+    try {
+      setJoining(true);
+      const response = await joinClass(classCode.trim());
+      setJoinDialogVisible(false);
+      setClassCode('');
+      await fetchClasses();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to join class');
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#8B5CF6" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Classes</Text>
-        <TouchableOpacity 
-          onPress={() => console.log('Add class')}
-        >
-          <Ionicons name="add" size={24} color="#fff" />
-        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView}>
-        {SAMPLE_CLASSES.map((classItem) => (
-          <TouchableOpacity 
-            key={classItem.id}
-            style={styles.classCard}
-            onPress={() => router.push('/auth/home')}
-          >
-            <ImageBackground
-              source={{ uri: classItem.image }}
-              style={styles.cardBackground}
-              imageStyle={styles.cardBackgroundImage}
-            >
-              <View style={styles.cardContent}>
-                <Text style={styles.className}>{classItem.name}</Text>
-                <Text style={styles.classInstructor}>{classItem.instructor}</Text>
-                <Text style={styles.classTime}>{classItem.time}</Text>
-              </View>
-            </ImageBackground>
-          </TouchableOpacity>
-        ))}
+        {ownedClasses.length > 0 && (
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Classes You Teach</Text>
+            {ownedClasses.map((classItem) => (
+              <TouchableOpacity 
+                key={classItem.id}
+                style={styles.classCard}
+                onPress={() => router.push('/auth/home')}
+              >
+                <ImageBackground
+                  source={{ uri: classItem.image }}
+                  style={styles.cardBackground}
+                  imageStyle={styles.cardBackgroundImage}
+                >
+                  <View style={styles.cardContent}>
+                    <Text style={styles.className}>{classItem.name}</Text>
+                    <Text style={styles.classInstructor}>{classItem.instructor}</Text>
+                    <Text style={styles.classTime}>{classItem.time}</Text>
+                  </View>
+                </ImageBackground>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {enrolledClasses.length > 0 && (
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Enrolled Classes</Text>
+            {enrolledClasses.map((classItem) => (
+              <TouchableOpacity 
+                key={classItem.id}
+                style={styles.classCard}
+                onPress={() => router.push('/auth/home')}
+              >
+                <ImageBackground
+                  source={{ uri: classItem.image }}
+                  style={styles.cardBackground}
+                  imageStyle={styles.cardBackgroundImage}
+                >
+                  <View style={styles.cardContent}>
+                    <Text style={styles.className}>{classItem.name}</Text>
+                    <Text style={styles.classInstructor}>{classItem.instructor}</Text>
+                    <Text style={styles.classTime}>{classItem.time}</Text>
+                  </View>
+                </ImageBackground>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {ownedClasses.length === 0 && enrolledClasses.length === 0 && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>No classes found</Text>
+            <Text style={styles.emptyStateSubtext}>Join or create a class to get started</Text>
+          </View>
+        )}
       </ScrollView>
+
+      {menuVisible && (
+        <TouchableOpacity 
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={toggleMenu}
+        >
+          <Animated.View 
+            style={[
+              styles.menuContainer,
+              {
+                transform: [
+                  {
+                    translateY: menuAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [100, 0],
+                    }),
+                  },
+                ],
+                opacity: menuAnimation,
+              },
+            ]}
+          >
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={() => {
+                toggleMenu();
+                router.push('/auth/create-class');
+              }}
+            >
+              <Ionicons name="add-circle-outline" size={24} color="#1a1a1a" />
+              <Text style={styles.menuItemText}>Create a Class</Text>
+            </TouchableOpacity>
+
+            <View style={styles.menuDivider} />
+
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={() => {
+                toggleMenu();
+                setJoinDialogVisible(true);
+              }}
+            >
+              <Ionicons name="enter-outline" size={24} color="#1a1a1a" />
+              <Text style={styles.menuItemText}>Join a Class</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity 
         style={styles.fab}
-        onPress={() => console.log('Add class')}
+        onPress={toggleMenu}
       >
-        <Ionicons name="add" size={30} color="#fff" />
+        <Ionicons 
+          name={menuVisible ? "close" : "add"} 
+          size={30} 
+          color="#fff" 
+        />
       </TouchableOpacity>
+
+      {joinDialogVisible && (
+        <TouchableOpacity 
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={() => setJoinDialogVisible(false)}
+        >
+          <Animated.View 
+            style={[styles.dialogContainer]}
+          >
+            <Text style={styles.dialogTitle}>Join a Class</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter class code"
+              placeholderTextColor="#666"
+              value={classCode}
+              onChangeText={setClassCode}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={handleJoinClass}
+              enablesReturnKeyAutomatically={true}
+              keyboardType="default"
+            />
+            <View style={styles.dialogButtons}>
+              <TouchableOpacity 
+                style={[styles.dialogButton, styles.cancelButton]}
+                onPress={() => {
+                  setJoinDialogVisible(false);
+                  setClassCode('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.dialogButton, styles.joinButton]}
+                onPress={handleJoinClass}
+                disabled={joining}
+              >
+                {joining ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.joinButtonText}>Join</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -186,6 +352,118 @@ const styles = StyleSheet.create({
     backgroundColor: '#8B5CF6',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sectionContainer: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 12,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 8,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#666',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  menuContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16,
+    marginHorizontal: 8,
+    marginBottom: 80,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  menuItemText: {
+    fontSize: 16,
+    marginLeft: 12,
+    color: '#1a1a1a',
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#e5e5e5',
+  },
+  dialogContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    marginHorizontal: 32,
+    alignSelf: 'center',
+    width: '90%',
+    maxWidth: 400,
+  },
+  dialogTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  input: {
+    height: 48,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: '#1a1a1a',
+    marginBottom: 16,
+  },
+  dialogButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  dialogButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#f5f5f5',
+  },
+  joinButton: {
+    backgroundColor: '#8B5CF6',
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  joinButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
     

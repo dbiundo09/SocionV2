@@ -97,7 +97,6 @@ export default function HomeScreen() {
         <View style={styles.headerRight}>
           <TouchableOpacity 
             style={styles.themeToggle} 
-            onPress={() => setIsDarkMode(!isDarkMode)}
           >
             <Ionicons 
               name={isDarkMode ? 'sunny-outline' : 'moon-outline'} 

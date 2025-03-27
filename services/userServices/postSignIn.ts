@@ -14,7 +14,7 @@ export default async function postSignIn() {
     const idToken = await user.getIdToken();
 
 
-    const response = await fetch('http://localhost:8000/user/postSignin', {
+    const response = await fetch(apiUrl + '/user/postSignin', {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${idToken}`

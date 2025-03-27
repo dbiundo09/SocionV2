@@ -13,5 +13,5 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-, "app/_layout.tsx", "app/about.jsx", "app/index.tsx", "app/+not-found.jsx"  ]
+, "app/_layout.tsx", "app/about.jsx", "app/index.tsx", "app/+not-found.jsx", "services/adminServices"  ]
 }
