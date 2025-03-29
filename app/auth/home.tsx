@@ -56,7 +56,7 @@ export default function HomeScreen() {
 
 
   const toggleCompletion = (id: string) => {
-    setDailies(dailies.map(daily => 
+    setDailies(dailies.map(daily =>
       daily.id === id ? { ...daily, completed: !daily.completed } : daily
     ));
   };
@@ -65,7 +65,11 @@ export default function HomeScreen() {
     <View style={[styles.dailyItem, { backgroundColor: activeTheme.cardBackground }]}>
       <TouchableOpacity
         style={styles.dailyTextContainer}
-        onPress={() => navigation.navigate('DailyDetail', { title: props.item.title })}
+        onPress={() => {
+          console.log('exercise-details'),
+            router.push('/auth/exercise-details')
+        }
+        }
       >
         <Text style={[styles.dailyTitle, { color: activeTheme.text }]}>{props.item.title}</Text>
         <Text style={[styles.dailySubtitle, { color: activeTheme.subtitleText }]}>{props.item.subtitle}</Text>
@@ -83,39 +87,39 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: activeTheme.background }]}>
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => router.push('/auth/classes')}
           style={styles.backButton}
         >
-          <Ionicons 
-            name="arrow-back" 
-            size={24} 
-            color={activeTheme.text} 
+          <Ionicons
+            name="arrow-back"
+            size={24}
+            color={activeTheme.text}
           />
         </TouchableOpacity>
         <Text style={[styles.headerText, { color: activeTheme.text }]}>Home</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity 
-            style={styles.themeToggle} 
+          <TouchableOpacity
+            style={styles.themeToggle}
           >
-            <Ionicons 
-              name={isDarkMode ? 'sunny-outline' : 'moon-outline'} 
-              size={24} 
-              color={activeTheme.text} 
+            <Ionicons
+              name={isDarkMode ? 'sunny-outline' : 'moon-outline'}
+              size={24}
+              color={activeTheme.text}
             />
           </TouchableOpacity>
           <TouchableOpacity style={styles.signOutButton} onPress={() => auth().signOut()} >
-            <Ionicons 
-              name="log-out-outline" 
-              size={24} 
-              color={activeTheme.text} 
+            <Ionicons
+              name="log-out-outline"
+              size={24}
+              color={activeTheme.text}
             />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('AccountInfo')}>
-            <Ionicons 
-              name="person-circle-outline" 
-              size={30} 
-              color={activeTheme.text} 
+            <Ionicons
+              name="person-circle-outline"
+              size={30}
+              color={activeTheme.text}
             />
           </TouchableOpacity>
         </View>

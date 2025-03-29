@@ -7,6 +7,7 @@ export default function Layout() {
         <Stack.Screen name="classes" options={{headerShown: false}} />
         <Stack.Screen name="create-class" options={{headerShown: false}} />
         <Stack.Screen name="admin-view" options={{headerShown: false}} />
+        <Stack.Screen name="exercise-details" options={{headerShown: false}} />
     </Stack>
   );
 }
