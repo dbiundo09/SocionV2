@@ -7,7 +7,7 @@ interface ClassJoin {
   class_id: string;
 }
 
-export default async function joinClass(classData: ClassJoin) {
+export default async function joinClass(classId: string) {
   try {
     const auth = getAuth();
     const user = auth.currentUser;
@@ -17,13 +17,17 @@ export default async function joinClass(classData: ClassJoin) {
     }
     const idToken = await user.getIdToken();
 
+    const payload: ClassJoin = {
+      class_id: classId
+    };
+
     const response = await fetch(`${apiUrl}/user/joinClass`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${idToken}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(classData)
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
