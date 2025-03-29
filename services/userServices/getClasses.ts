@@ -1,4 +1,5 @@
 import { getAuth } from "@react-native-firebase/auth";
+import { handleUnauthorizedError } from '@/services/authServices/handleUnauthorized';
 
 const apiUrl: string = process.env.API_URL || 'http://localhost:8000';
 
@@ -12,11 +13,6 @@ export default async function getUserClasses() {
     }
     const idToken = await user.getIdToken();
 
-    console.log('Making request to:', `${apiUrl}/user/classes`);
-    console.log('Request headers:', {
-      'Authorization': `Bearer ${idToken}`,
-      'Content-Type': 'application/json'
-    });
 
     const response = await fetch(`${apiUrl}/user/classes`, {
       method: 'GET',
@@ -28,14 +24,17 @@ export default async function getUserClasses() {
 
     if (!response.ok) {
       const error = await response.json();
-      console.error('Error response:', error);
+      if (response.status === 401) {
+        throw new Error('unauthorized');
+      }
       throw new Error(error.message || 'Failed to fetch user classes');
     }
 
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
-    console.error('Error fetching user classes:', error);
+    if (handleUnauthorizedError(error)) {
+      return null;
+    }
     throw error;
   }
 }

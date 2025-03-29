@@ -3,11 +3,7 @@ import { handleUnauthorizedError } from '@/services/authServices/handleUnauthori
 
 const apiUrl: string = process.env.API_URL || 'http://localhost:8000';
 
-interface ClassJoin {
-  class_id: string;
-}
-
-export default async function joinClass(classData: ClassJoin) {
+export default async function getAdminInfo(classId: string) {
   try {
     const auth = getAuth();
     const user = auth.currentUser;
@@ -17,13 +13,13 @@ export default async function joinClass(classData: ClassJoin) {
     }
     const idToken = await user.getIdToken();
 
-    const response = await fetch(`${apiUrl}/user/joinClass`, {
-      method: 'POST',
+
+    const response = await fetch(`${apiUrl}/admin/getClassInfo?class_id=${classId}`, {
+      method: 'GET',
       headers: {
         'Authorization': `Bearer ${idToken}`,
         'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(classData)
+      }
     });
 
     if (!response.ok) {
@@ -31,7 +27,7 @@ export default async function joinClass(classData: ClassJoin) {
       if (response.status === 401) {
         throw new Error('unauthorized');
       }
-      throw new Error(error.message || 'Failed to join class');
+      throw new Error(error.message || 'Failed to fetch class info');
     }
 
     return await response.json();

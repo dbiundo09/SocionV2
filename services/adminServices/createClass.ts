@@ -1,4 +1,5 @@
 import { getAuth } from "@react-native-firebase/auth";
+import { handleUnauthorizedError } from '@/services/authServices/handleUnauthorized';
 
 const apiUrl: string = process.env.API_URL || 'http://localhost:8000';
 
@@ -19,13 +20,7 @@ export default async function createClass(classData: ClassCreate) {
     }
     const idToken = await user.getIdToken();
 
-    console.log('Making request to:', `${apiUrl}/admin/createClass`);
-    console.log('Request headers:', {
-      'Authorization': `Bearer ${idToken}`,
-      'Content-Type': 'application/json'
-    });
-    console.log('Request body:', classData);
-
+   
     const response = await fetch(`${apiUrl}/admin/createClass`, {
       method: 'POST',
       headers: {
@@ -37,12 +32,17 @@ export default async function createClass(classData: ClassCreate) {
 
     if (!response.ok) {
       const error = await response.json();
-      console.error('Error response:', error);
+      if (response.status === 401) {
+        throw new Error('unauthorized');
+      }
       throw new Error(error.message || 'Failed to create class');
     }
 
     return await response.json();
   } catch (error) {
+    if (handleUnauthorizedError(error)) {
+      return null;
+    }
     throw error;
   }
 }

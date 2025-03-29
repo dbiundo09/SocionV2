@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import getUserClasses from '../../services/userServices/getClasses';
 import { ClassItem } from '../types/class';
 import joinClass from '../../services/userServices/joinClass';
+import { handleLogout } from '../../services/authServices/handleUnauthorized';
 
 export default function ClassesScreen() {
   const router = useRouter();
@@ -88,6 +89,12 @@ export default function ClassesScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Classes</Text>
+        <TouchableOpacity 
+          onPress={handleLogout}
+          style={styles.logoutButton}
+        >
+          <Ionicons name="log-out-outline" size={24} color="#666" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView}>
@@ -98,7 +105,10 @@ export default function ClassesScreen() {
               <TouchableOpacity 
                 key={classItem.id}
                 style={styles.classCard}
-                onPress={() => router.push('/auth/home')}
+                onPress={() => router.push({
+                  pathname: '/auth/admin-view',
+                  params: { classId: classItem.id }
+                })}
               >
                 <ImageBackground
                   source={{ uri: classItem.image }}
@@ -464,6 +474,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  logoutButton: {
+    padding: 8,
   },
 });
     
