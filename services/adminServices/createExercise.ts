@@ -10,9 +10,12 @@ interface ExerciseCreate {
   startDate: string;
   endDate: string;
   classId: string;
+  exerciseName: string;
+  exerciseDescription: string;
 }
 
 export default async function createExercise(exerciseData: ExerciseCreate) {
+  console.log(exerciseData);
   try {
     const auth = getAuth();
     const user = auth.currentUser;
@@ -38,6 +41,8 @@ export default async function createExercise(exerciseData: ExerciseCreate) {
     formData.append('startDate', exerciseData.startDate);
     formData.append('endDate', exerciseData.endDate);
     formData.append('classId', exerciseData.classId);
+    formData.append('exerciseName', exerciseData.exerciseName);
+    formData.append('exerciseDescription', exerciseData.exerciseDescription);
 
     const response = await fetch(`${apiUrl}/admin/createExercise`, {
       method: 'POST',

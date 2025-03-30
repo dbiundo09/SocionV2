@@ -30,10 +30,12 @@ export default function AdminViewScreen() {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [exerciseData, setExerciseData] = useState({
         mediaUri: '',
-        mediaType: '', // 'audio' or 'video'
-        duration: '',
+        mediaType: '',
+        duration: '00:00:00',
         startDate: new Date(),
         endDate: new Date(),
+        exerciseName: '',
+        exerciseDescription: '',
     });
     const [datePickerMode, setDatePickerMode] = useState<'start' | 'end'>('start');
     const [showDatePicker, setShowDatePicker] = useState(false);
@@ -62,6 +64,7 @@ export default function AdminViewScreen() {
         }
     };
 
+    
     const pickMedia = async () => {
         try {
             const result = await DocumentPicker.getDocumentAsync({
@@ -70,6 +73,7 @@ export default function AdminViewScreen() {
 
             if (result.assets && result.assets[0]) {
                 const asset = result.assets[0];
+                
                 setExerciseData({
                     ...exerciseData,
                     mediaUri: asset.uri,
@@ -93,8 +97,8 @@ export default function AdminViewScreen() {
         }
     };
 
-
     const handleSubmit = async () => {
+        setShowDatePicker(false);
         if (!exerciseData.mediaUri) {
             Alert.alert('Error', 'Please select a media file');
             return;
@@ -103,17 +107,26 @@ export default function AdminViewScreen() {
             Alert.alert('Error', 'Please enter exercise duration');
             return;
         }
+        if (!exerciseData.exerciseName.trim()) {
+            Alert.alert('Error', 'Please enter exercise name');
+            return;
+        }
 
         try {
             setLoading(true);
+            // Parse duration from HH:MM:SS to total seconds
+            const [hours, minutes, seconds] = exerciseData.duration.split(':').map(Number);
+            const totalSeconds = (hours * 3600 + minutes * 60 + seconds).toString();
 
             await createExercise({
                 mediaUri: exerciseData.mediaUri,
                 mediaType: exerciseData.mediaType,
-                duration: exerciseData.duration,
+                duration: totalSeconds, // Now sending total seconds as a string
                 startDate: exerciseData.startDate.toISOString(),
                 endDate: exerciseData.endDate.toISOString(),
                 classId: classId as string,
+                exerciseName: exerciseData.exerciseName.trim(),
+                exerciseDescription: exerciseData.exerciseDescription.trim(),
             });
 
             Alert.alert('Success', 'Exercise added successfully');
@@ -123,9 +136,11 @@ export default function AdminViewScreen() {
             setExerciseData({
                 mediaUri: '',
                 mediaType: '',
-                duration: '',
+                duration: '00:00:00',
                 startDate: new Date(),
                 endDate: new Date(),
+                exerciseName: '',
+                exerciseDescription: '',
             });
         } catch (error) {
             console.error('Error creating exercise:', error);
@@ -189,13 +204,11 @@ export default function AdminViewScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={[styles.button, styles.deleteButton]}
-                        onPress={() => {
-                            console.log('Delete button pressed');
-                        }}
+                        style={[styles.button, styles.viewButton]}
+                        onPress={() => router.push(`/auth/view-exercises/${classId}`)}
                     >
-                        <Ionicons name="trash-outline" size={24} color="#fff" />
-                        <Text style={styles.buttonText}>Delete Class</Text>
+                        <Ionicons name="list-outline" size={24} color="#fff" />
+                        <Text style={styles.buttonText}>View Exercises</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -255,15 +268,108 @@ export default function AdminViewScreen() {
                             </TouchableOpacity>
 
                             <View style={styles.formGroup}>
-                                <Text style={styles.label}>Duration (minutes)</Text>
+                                <Text style={styles.label}>Exercise Name</Text>
                                 <TextInput
                                     style={styles.input}
-                                    value={exerciseData.duration}
-                                    onChangeText={(text) => setExerciseData({ ...exerciseData, duration: text })}
-                                    keyboardType="numeric"
-                                    placeholder="Enter duration"
+                                    value={exerciseData.exerciseName}
+                                    onChangeText={(text) => setExerciseData({ ...exerciseData, exerciseName: text })}
+                                    placeholder="Enter exercise name"
                                     placeholderTextColor="#666"
                                 />
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Exercise Description</Text>
+                                <TextInput
+                                    style={[styles.input, styles.textArea]}
+                                    value={exerciseData.exerciseDescription}
+                                    onChangeText={(text) => setExerciseData({ ...exerciseData, exerciseDescription: text })}
+                                    placeholder="Enter exercise description"
+                                    placeholderTextColor="#666"
+                                    multiline={true}
+                                    numberOfLines={4}
+                                    textAlignVertical="top"
+                                />
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Duration</Text>
+                                <View style={styles.timeInputContainer}>
+                                    <View style={styles.timeInputGroup}>
+                                        <TextInput
+                                            style={styles.timeInput}
+                                            value={exerciseData.duration.split(':')[0] || ''}
+                                            onChangeText={(text) => {
+                                                const numbers = text.replace(/[^0-9]/g, '');
+                                                const [_, mm, ss] = exerciseData.duration.split(':');
+                                                setExerciseData({
+                                                    ...exerciseData,
+                                                    duration: `${numbers}:${mm || '00'}:${ss || '00'}`
+                                                });
+                                            }}
+                                            keyboardType="numeric"
+                                            maxLength={2}
+                                            placeholder="00"
+                                            placeholderTextColor="#666"
+                                        />
+                                        <Text style={styles.timeLabel}>hours</Text>
+                                    </View>
+
+                                    <View style={styles.timeInputGroup}>
+                                        <TextInput
+                                            style={styles.timeInput}
+                                            value={exerciseData.duration.split(':')[1] || ''}
+                                            onChangeText={(text) => {
+                                                const numbers = text.replace(/[^0-9]/g, '');
+                                                if (parseInt(numbers) < 60 || numbers === '') {
+                                                    const [hh, _, ss] = exerciseData.duration.split(':');
+                                                    setExerciseData({
+                                                        ...exerciseData,
+                                                        duration: `${hh || '00'}:${numbers}:${ss || '00'}`
+                                                    });
+                                                }
+                                            }}
+                                            keyboardType="numeric"
+                                            maxLength={2}
+                                            placeholder="00"
+                                            placeholderTextColor="#666"
+                                        />
+                                        <Text style={styles.timeLabel}>min</Text>
+                                    </View>
+
+                                    <View style={styles.timeInputGroup}>
+                                        <TextInput
+                                            style={styles.timeInput}
+                                            value={exerciseData.duration.split(':')[2] || ''}
+                                            onChangeText={(text) => {
+                                                const numbers = text.replace(/[^0-9]/g, '');
+                                                if (parseInt(numbers) < 60 || numbers === '') {
+                                                    const [hh, mm] = exerciseData.duration.split(':');
+                                                    setExerciseData({
+                                                        ...exerciseData,
+                                                        duration: `${hh || '00'}:${mm || '00'}:${numbers}`
+                                                    });
+                                                }
+                                            }}
+                                            keyboardType="numeric"
+                                            maxLength={2}
+                                            placeholder="00"
+                                            placeholderTextColor="#666"
+                                        />
+                                        <Text style={styles.timeLabel}>sec</Text>
+                                    </View>
+                                </View>
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                {showDatePicker && (
+                                    <DateTimePicker
+                                        value={datePickerMode === 'start' ? exerciseData.startDate : exerciseData.endDate}
+                                        mode="date"
+                                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                        onChange={onDateChange}
+                                    />
+                                )}
                             </View>
 
                             <View style={styles.formGroup}>
@@ -295,16 +401,7 @@ export default function AdminViewScreen() {
                                     </Text>
                                 </TouchableOpacity>
                             </View>
-                            <View style={styles.formGroup}>
-                                {showDatePicker && (
-                                    <DateTimePicker
-                                        value={datePickerMode === 'start' ? exerciseData.startDate : exerciseData.endDate}
-                                        mode="date"
-                                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                                        onChange={onDateChange}
-                                    />
-                                )}
-                            </View>
+                            
 
                         </ScrollView>
 
@@ -396,8 +493,8 @@ const styles = StyleSheet.create({
     editButton: {
         backgroundColor: '#8B5CF6',
     },
-    deleteButton: {
-        backgroundColor: '#EF4444',
+    viewButton: {
+        backgroundColor: '#3B82F6',
     },
     buttonText: {
         color: '#fff',
@@ -541,5 +638,34 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
+    },
+    textArea: {
+        height: 100,
+        paddingTop: 12,
+        paddingBottom: 12,
+    },
+    timeInputContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 16,
+    },
+    timeInputGroup: {
+        alignItems: 'center',
+    },
+    timeInput: {
+        width: 60,
+        height: 48,
+        backgroundColor: '#f5f5f5',
+        borderRadius: 8,
+        paddingHorizontal: 16,
+        fontSize: 16,
+        color: '#1a1a1a',
+        textAlign: 'center',
+    },
+    timeLabel: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 4,
     },
 }); 
