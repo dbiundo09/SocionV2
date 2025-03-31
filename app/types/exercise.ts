@@ -1,4 +1,5 @@
 export interface Exercise {
+    exercise_id: string | null;
     audio_url: string | null;
     video_url: string | null;
     class_id: string;

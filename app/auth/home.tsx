@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Text, View, StyleSheet, TouchableOpacity, FlatList, useColorScheme } from 'react-native';
+import { Text, View, StyleSheet, TouchableOpacity, FlatList, useColorScheme, ActivityIndicator } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import auth from '@react-native-firebase/auth';
-
-
+import getExercises from '@/services/userServices/getExercises';
+import { Exercise } from '@/app/types/exercise';
 
 const DARK_MODE_BACKGROUND = 'rgb(41, 44, 47)';
 
@@ -28,61 +28,110 @@ const theme = {
   }
 };
 
-const initialDailies = [
-  { id: '1', title: 'Morning Breathwork', subtitle: 'Supporting line text lorem ipsum dolor sit amet, consectetur.', completed: false },
-  { id: '2', title: 'Nature', subtitle: 'Supporting line text lorem ipsum dolor sit amet, consectetur.', completed: true },
-  { id: '3', title: 'Evening Chanting', subtitle: 'Supporting line text lorem ipsum dolor sit amet, consectetur.', completed: false },
-  { id: '4', title: 'Gratitude', subtitle: 'Supporting line text lorem ipsum dolor sit amet, consectetur.', completed: false },
-];
-
-interface Daily {
-  id: string;
-  title: string;
-  subtitle: string;
-  completed: boolean;
-}
-
 type RootStackParamList = {
   DailyDetail: { title: string };
-  AccountInfo: undefined;  // undefined means no params required
+  AccountInfo: undefined;
 };
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const router = useRouter();
-  const [dailies, setDailies] = useState<Daily[]>(initialDailies);
+  const { classId } = useLocalSearchParams<{ classId: string }>();
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [loading, setLoading] = useState(true);
   const activeTheme = isDarkMode ? theme.dark : theme.light;
 
+  useEffect(() => {
+    if (classId) {
+      loadExercises();
+    }
+  }, [classId]);
 
-  const toggleCompletion = (id: string) => {
-    setDailies(dailies.map(daily =>
-      daily.id === id ? { ...daily, completed: !daily.completed } : daily
-    ));
+  const loadExercises = async () => {
+    try {
+      setLoading(true);
+      const data = await getExercises(classId);
+      setExercises(data);
+    } catch (error) {
+      console.error('Error loading exercises:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const renderDaily = (props: { item: Daily }) => (
+  const formatDuration = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${remainingSeconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${remainingSeconds}s`;
+    } else {
+      return `${remainingSeconds}s`;
+    }
+  };
+
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const truncateText = (text: string | null, maxLength: number = 100): string => {
+    if (!text) return 'No description available';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  };
+
+  const renderExercise = ({ item }: { item: Exercise }) => (
     <View style={[styles.dailyItem, { backgroundColor: activeTheme.cardBackground }]}>
       <TouchableOpacity
         style={styles.dailyTextContainer}
         onPress={() => {
-          console.log('exercise-details'),
-            router.push('/auth/exercise-details')
-        }
-        }
+          console.log("Pressed")
+          console.log(item)
+          router.push({
+            pathname: '/auth/exercise-details',
+            params: { exercise: JSON.stringify(item) }
+          });
+        }}
       >
-        <Text style={[styles.dailyTitle, { color: activeTheme.text }]}>{props.item.title}</Text>
-        <Text style={[styles.dailySubtitle, { color: activeTheme.subtitleText }]}>{props.item.subtitle}</Text>
+        <Text style={[styles.dailyTitle, { color: activeTheme.text }]}>{item.exercise_name}</Text>
+        <Text style={[styles.dailySubtitle, { color: activeTheme.subtitleText }]}>
+          {truncateText(item.exercise_description)}
+        </Text>
+        <View style={styles.exerciseDetails}>
+          <Text style={[styles.detailText, { color: activeTheme.subtitleText }]}>
+            Duration: {formatDuration(item.time)}
+          </Text>
+          <Text style={[styles.detailText, { color: activeTheme.subtitleText }]}>
+            {formatDate(item.start_time)} - {formatDate(item.end_time)}
+          </Text>
+        </View>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => toggleCompletion(props.item.id)}>
+      <TouchableOpacity>
         <Ionicons
-          name={props.item.completed ? 'checkbox' : 'square-outline'}
+          name="chevron-forward"
           size={24}
           color={activeTheme.text}
         />
       </TouchableOpacity>
     </View>
   );
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent, { backgroundColor: activeTheme.background }]}>
+        <ActivityIndicator size="large" color="#8B5CF6" />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: activeTheme.background }]}>
@@ -97,10 +146,11 @@ export default function HomeScreen() {
             color={activeTheme.text}
           />
         </TouchableOpacity>
-        <Text style={[styles.headerText, { color: activeTheme.text }]}>Home</Text>
+        <Text style={[styles.headerText, { color: activeTheme.text }]}>Exercises</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={styles.themeToggle}
+            onPress={() => setIsDarkMode(!isDarkMode)}
           >
             <Ionicons
               name={isDarkMode ? 'sunny-outline' : 'moon-outline'}
@@ -126,20 +176,23 @@ export default function HomeScreen() {
       </View>
       <View style={[styles.trackingContainer, { backgroundColor: activeTheme.trackingBox }]}>
         <View style={styles.trackingBox}>
-          <Text style={styles.trackingNumber}>0</Text>
-          <Text style={styles.trackingLabel}>Classes</Text>
+          <Text style={styles.trackingNumber}>{exercises.length}</Text>
+          <Text style={styles.trackingLabel}>Exercises</Text>
         </View>
         <View style={[styles.verticalSeparator, { backgroundColor: activeTheme.separator }]}></View>
         <View style={styles.trackingBox}>
-          <Text style={styles.trackingNumber}>0</Text>
-          <Text style={styles.trackingLabel}>Day Streak</Text>
+          <Text style={styles.trackingNumber}>
+            {exercises.reduce((acc, exercise) => acc + exercise.time, 0)}
+          </Text>
+          <Text style={styles.trackingLabel}>Total Time</Text>
         </View>
       </View>
-      <Text style={[styles.dailyChecklistTitle, { color: activeTheme.text }]}>Daily Checklist</Text>
+      <Text style={[styles.dailyChecklistTitle, { color: activeTheme.text }]}>Exercise List</Text>
       <FlatList
-        data={dailies}
-        renderItem={renderDaily}
+        data={exercises}
+        renderItem={renderExercise}
         keyExtractor={item => item.id}
+        contentContainerStyle={styles.listContainer}
       />
     </View>
   );
@@ -150,6 +203,10 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     paddingTop: 48,
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -225,8 +282,19 @@ const styles = StyleSheet.create({
   dailySubtitle: {
     fontSize: 14,
     color: '#666',
+    marginTop: 4,
+  },
+  exerciseDetails: {
+    marginTop: 8,
+  },
+  detailText: {
+    fontSize: 12,
+    marginTop: 2,
   },
   backButton: {
     marginRight: 16,
+  },
+  listContainer: {
+    paddingBottom: 16,
   },
 });

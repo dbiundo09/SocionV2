@@ -133,7 +133,10 @@ export default function ClassesScreen() {
               <TouchableOpacity 
                 key={classItem.id}
                 style={styles.classCard}
-                onPress={() => router.push('/auth/home')}
+                onPress={() => router.push({
+                  pathname: '/auth/home',
+                  params: { classId: classItem.id }
+                })}
               >
                 <ImageBackground
                   source={{ uri: classItem.image }}
