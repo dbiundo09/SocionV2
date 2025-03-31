@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Text, View, StyleSheet, TouchableOpacity, FlatList, useColorScheme, ActivityIndicator } from 'react-native';
+import { Text, View, StyleSheet, TouchableOpacity, FlatList, useColorScheme, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -40,6 +40,7 @@ export default function HomeScreen() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const activeTheme = isDarkMode ? theme.dark : theme.light;
 
   useEffect(() => {
@@ -125,19 +126,35 @@ export default function HomeScreen() {
     </View>
   );
 
+  const handleBackPress = () => {
+    router.back();
+  };
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadExercises();
+    } catch (error) {
+      console.error('Error refreshing exercises:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [classId]);
+
   if (loading) {
     return (
-      <View style={[styles.container, styles.centerContent, { backgroundColor: activeTheme.background }]}>
-        <ActivityIndicator size="large" color="#8B5CF6" />
+      <View style={[styles.container, { backgroundColor: activeTheme.background }]}>
+        <ActivityIndicator size="large" color="#6b5b9e" />
       </View>
     );
   }
+  
 
   return (
     <View style={[styles.container, { backgroundColor: activeTheme.background }]}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => router.push('/auth/classes')}
+          onPress={handleBackPress}
           style={styles.backButton}
         >
           <Ionicons
@@ -147,32 +164,32 @@ export default function HomeScreen() {
           />
         </TouchableOpacity>
         <Text style={[styles.headerText, { color: activeTheme.text }]}>Exercises</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.themeToggle}
-            onPress={() => setIsDarkMode(!isDarkMode)}
-          >
-            <Ionicons
-              name={isDarkMode ? 'sunny-outline' : 'moon-outline'}
-              size={24}
-              color={activeTheme.text}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.signOutButton} onPress={() => auth().signOut()} >
-            <Ionicons
-              name="log-out-outline"
-              size={24}
-              color={activeTheme.text}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('AccountInfo')}>
-            <Ionicons
-              name="person-circle-outline"
-              size={30}
-              color={activeTheme.text}
-            />
-          </TouchableOpacity>
-        </View>
+      </View>
+      <View style={[styles.headerRight]}>
+        <TouchableOpacity
+          style={styles.themeToggle}
+          onPress={() => setIsDarkMode(!isDarkMode)}
+        >
+          <Ionicons
+            name={isDarkMode ? 'sunny-outline' : 'moon-outline'}
+            size={24}
+            color={activeTheme.text}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.signOutButton} onPress={() => auth().signOut()} >
+          <Ionicons
+            name="log-out-outline"
+            size={24}
+            color={activeTheme.text}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('AccountInfo')}>
+          <Ionicons
+            name="person-circle-outline"
+            size={30}
+            color={activeTheme.text}
+          />
+        </TouchableOpacity>
       </View>
       <View style={[styles.trackingContainer, { backgroundColor: activeTheme.trackingBox }]}>
         <View style={styles.trackingBox}>
@@ -191,8 +208,18 @@ export default function HomeScreen() {
       <FlatList
         data={exercises}
         renderItem={renderExercise}
-        keyExtractor={item => item.id}
+        keyExtractor={item => item.exercise_id || ''}
         contentContainerStyle={styles.listContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#6b5b9e']}
+            tintColor="#6b5b9e"
+            size="large"
+            progressViewOffset={50}
+          />
+        }
       />
     </View>
   );
@@ -296,5 +323,13 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingBottom: 16,
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoText: {
+    fontSize: 24,
+    fontWeight: 'bold',
   },
 });

@@ -10,7 +10,10 @@ import {
   Animated,
   TextInput,
   Alert,
-  Keyboard
+  Keyboard,
+  FlatList,
+  useColorScheme,
+  RefreshControl
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -29,6 +32,7 @@ export default function ClassesScreen() {
   const [joinDialogVisible, setJoinDialogVisible] = useState(false);
   const [classCode, setClassCode] = useState('');
   const [joining, setJoining] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchClasses();
@@ -77,6 +81,69 @@ export default function ClassesScreen() {
     }
   };
 
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchClasses();
+    } catch (error) {
+      console.error('Error refreshing classes:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
+  const renderClassList = (classes: ClassItem[], title: string) => (
+    <View style={styles.sectionContainer}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <FlatList
+        data={classes}
+        renderItem={({ item: classItem }) => (
+          <TouchableOpacity 
+            key={classItem.id}
+            style={styles.classCard}
+            onPress={() => {
+              if (title === "Classes You Teach") {
+                router.push({
+                  pathname: '/auth/admin-view',
+                  params: { classId: classItem.id }
+                });
+              } else {
+                router.push({
+                  pathname: '/auth/home',
+                  params: { classId: classItem.id }
+                });
+              }
+            }}
+          >
+            <ImageBackground
+              source={{ uri: classItem.image }}
+              style={styles.cardBackground}
+              imageStyle={styles.cardBackgroundImage}
+            >
+              <View style={styles.cardContent}>
+                <Text style={styles.className}>{classItem.name}</Text>
+                <Text style={styles.classInstructor}>{classItem.instructor}</Text>
+                <Text style={styles.classTime}>{classItem.time}</Text>
+              </View>
+            </ImageBackground>
+          </TouchableOpacity>
+        )}
+        keyExtractor={item => item.id.toString()}
+        contentContainerStyle={styles.listContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#6b5b9e']}
+            tintColor="#6b5b9e"
+            size={50}
+            progressViewOffset={50}
+          />
+        }
+      />
+    </View>
+  );
+
   if (loading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
@@ -98,61 +165,8 @@ export default function ClassesScreen() {
       </View>
 
       <ScrollView style={styles.scrollView}>
-        {ownedClasses.length > 0 && (
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Classes You Teach</Text>
-            {ownedClasses.map((classItem) => (
-              <TouchableOpacity 
-                key={classItem.id}
-                style={styles.classCard}
-                onPress={() => router.push({
-                  pathname: '/auth/admin-view',
-                  params: { classId: classItem.id }
-                })}
-              >
-                <ImageBackground
-                  source={{ uri: classItem.image }}
-                  style={styles.cardBackground}
-                  imageStyle={styles.cardBackgroundImage}
-                >
-                  <View style={styles.cardContent}>
-                    <Text style={styles.className}>{classItem.name}</Text>
-                    <Text style={styles.classInstructor}>{classItem.instructor}</Text>
-                    <Text style={styles.classTime}>{classItem.time}</Text>
-                  </View>
-                </ImageBackground>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        {enrolledClasses.length > 0 && (
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Enrolled Classes</Text>
-            {enrolledClasses.map((classItem) => (
-              <TouchableOpacity 
-                key={classItem.id}
-                style={styles.classCard}
-                onPress={() => router.push({
-                  pathname: '/auth/home',
-                  params: { classId: classItem.id }
-                })}
-              >
-                <ImageBackground
-                  source={{ uri: classItem.image }}
-                  style={styles.cardBackground}
-                  imageStyle={styles.cardBackgroundImage}
-                >
-                  <View style={styles.cardContent}>
-                    <Text style={styles.className}>{classItem.name}</Text>
-                    <Text style={styles.classInstructor}>{classItem.instructor}</Text>
-                    <Text style={styles.classTime}>{classItem.time}</Text>
-                  </View>
-                </ImageBackground>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+        {ownedClasses.length > 0 && renderClassList(ownedClasses, "Classes You Teach")}
+        {enrolledClasses.length > 0 && renderClassList(enrolledClasses, "Enrolled Classes")}
 
         {ownedClasses.length === 0 && enrolledClasses.length === 0 && (
           <View style={styles.emptyState}>
@@ -480,6 +494,9 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     padding: 8,
+  },
+  listContainer: {
+    padding: 16,
   },
 });
     
