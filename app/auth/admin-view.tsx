@@ -12,6 +12,11 @@ import {
     TextInput,
     Platform,
     KeyboardAvoidingView,
+    Animated,
+    Keyboard,
+    FlatList,
+    useColorScheme,
+    RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +25,8 @@ import { ClassItem } from '../types/class';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
 import createExercise from '@/services/adminServices/createExercise';
+import Clipboard from '@react-native-clipboard/clipboard';
+import addUserByEmail from '@/services/adminServices/addUserByEmail';
 
 export default function AdminViewScreen() {
     const router = useRouter();
@@ -39,6 +46,10 @@ export default function AdminViewScreen() {
     });
     const [datePickerMode, setDatePickerMode] = useState<'start' | 'end'>('start');
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [addStudentMenuVisible, setAddStudentMenuVisible] = useState(false);
+    const [emailModalVisible, setEmailModalVisible] = useState(false);
+    const [emailInput, setEmailInput] = useState('');
+    const addStudentMenuAnimation = React.useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         loadClassData();
@@ -99,10 +110,6 @@ export default function AdminViewScreen() {
 
     const handleSubmit = async () => {
         setShowDatePicker(false);
-        if (!exerciseData.mediaUri) {
-            Alert.alert('Error', 'Please select a media file');
-            return;
-        }
         if (!exerciseData.duration) {
             Alert.alert('Error', 'Please enter exercise duration');
             return;
@@ -117,17 +124,23 @@ export default function AdminViewScreen() {
             // Parse duration from HH:MM:SS to total seconds
             const [hours, minutes, seconds] = exerciseData.duration.split(':').map(Number);
             const totalSeconds = (hours * 3600 + minutes * 60 + seconds).toString();
-
-            await createExercise({
-                mediaUri: exerciseData.mediaUri,
-                mediaType: exerciseData.mediaType,
-                duration: totalSeconds, // Now sending total seconds as a string
+            // Only include media fields if they have values
+            const exerciseDataToSubmit: any = {
+                duration: totalSeconds,
                 startDate: exerciseData.startDate.toISOString(),
                 endDate: exerciseData.endDate.toISOString(),
                 classId: classId as string,
                 exerciseName: exerciseData.exerciseName.trim(),
                 exerciseDescription: exerciseData.exerciseDescription.trim(),
-            });
+            };
+
+            // Only add media fields if they exist
+            if (exerciseData.mediaUri && exerciseData.mediaType) {
+                exerciseDataToSubmit.mediaUri = exerciseData.mediaUri;
+                exerciseDataToSubmit.mediaType = exerciseData.mediaType;
+            }
+
+            await createExercise(exerciseDataToSubmit);
 
             Alert.alert('Success', 'Exercise added successfully');
             setIsModalVisible(false);
@@ -148,6 +161,45 @@ export default function AdminViewScreen() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const toggleAddStudentMenu = () => {
+        const toValue = addStudentMenuVisible ? 0 : 1;
+        Animated.spring(addStudentMenuAnimation, {
+            toValue,
+            useNativeDriver: true,
+        }).start();
+        setAddStudentMenuVisible(!addStudentMenuVisible);
+    };
+
+    const handleAddByEmail = () => {
+        toggleAddStudentMenu();
+        setEmailModalVisible(true);
+    };
+
+    const handleEmailSubmit = async () => {
+        if (!emailInput.trim()) {
+            Alert.alert('Error', 'Please enter an email address');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const response = await addUserByEmail(emailInput.trim(), classId as string);
+            Alert.alert('Success', response.message);
+            setEmailInput('');
+            setEmailModalVisible(false);
+        } catch (error) {
+            Alert.alert('Error', error instanceof Error ? error.message : 'An unknown error occurred');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCopyClassCode = () => {
+        Clipboard.setString(classId as string);
+        Alert.alert('Success', 'Class code copied to clipboard');
+        toggleAddStudentMenu();
     };
 
     if (loading) {
@@ -188,39 +240,71 @@ export default function AdminViewScreen() {
                     style={styles.coverImage}
                 />
 
-                <View style={styles.classInfo}>
-                    <Text style={styles.className}>{classData.name}</Text>
-                    <Text style={styles.instructorName}>Instructor: {classData.instructor}</Text>
-                    <Text style={styles.classTime}>{classData.time}</Text>
-                </View>
-
-                <View style={styles.actionButtons}>
-                    <TouchableOpacity
-                        style={[styles.button, styles.editButton]}
-                        onPress={() => setIsModalVisible(true)}
-                    >
-                        <Ionicons name="add" size={24} color="#fff" />
-                        <Text style={styles.buttonText}>Add Exercise</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.button, styles.viewButton]}
-                        onPress={() => router.push(`/auth/view-exercises/${classId}`)}
-                    >
-                        <Ionicons name="list-outline" size={24} color="#fff" />
-                        <Text style={styles.buttonText}>View Exercises</Text>
-                    </TouchableOpacity>
-                </View>
-
-                <View style={styles.statsSection}>
-                    <Text style={styles.sectionTitle}>Class Statistics</Text>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>42</Text>
-                        <Text style={styles.statLabel}>Total Students</Text>
+                <View style={styles.mainContent}>
+                    <View style={styles.classInfo}>
+                        <Text style={styles.className}>{classData.name}</Text>
+                        <View style={styles.classDetails}>
+                            <View style={styles.detailRow}>
+                                <Ionicons name="person-outline" size={20} color="#666" />
+                                <Text style={styles.detailText}>{classData.instructor}</Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Ionicons name="time-outline" size={20} color="#666" />
+                                <Text style={styles.detailText}>{classData.time}</Text>
+                            </View>
+                        </View>
                     </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>89%</Text>
-                        <Text style={styles.statLabel}>Attendance Rate</Text>
+
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Quick Actions</Text>
+                        <View style={styles.buttonContainer}>
+                            <TouchableOpacity 
+                                style={[styles.button, styles.primaryButton]}
+                                onPress={() => setIsModalVisible(true)}
+                            >
+                                <Ionicons name="add-circle-outline" size={24} color="#fff" />
+                                <Text style={styles.buttonText}>Add Exercise</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity 
+                                style={[styles.button, styles.secondaryButton]}
+                                onPress={() => router.push({
+                                    pathname: '/auth/view-exercises/[classId]',
+                                    params: { classId }
+                                })}
+                            >
+                                <Ionicons name="list-outline" size={24} color="#fff" />
+                                <Text style={styles.buttonText}>View Exercises</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity 
+                                style={[styles.button, styles.secondaryButton]}
+                                onPress={toggleAddStudentMenu}
+                            >
+                                <Ionicons name="people-outline" size={24} color="#fff" />
+                                <Text style={styles.buttonText}>Add Student</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Class Statistics</Text>
+                        <View style={styles.statsGrid}>
+                            <View style={styles.statCard}>
+                                <View style={styles.statIconContainer}>
+                                    <Ionicons name="people" size={24} color="#8B5CF6" />
+                                </View>
+                                <Text style={styles.statNumber}>42</Text>
+                                <Text style={styles.statLabel}>Total Students</Text>
+                            </View>
+                            <View style={styles.statCard}>
+                                <View style={styles.statIconContainer}>
+                                    <Ionicons name="checkmark-circle" size={24} color="#8B5CF6" />
+                                </View>
+                                <Text style={styles.statNumber}>89%</Text>
+                                <Text style={styles.statLabel}>Attendance Rate</Text>
+                            </View>
+                        </View>
                     </View>
                 </View>
             </ScrollView>
@@ -254,7 +338,10 @@ export default function AdminViewScreen() {
 
                         <ScrollView style={styles.modalScroll}>
                             <TouchableOpacity
-                                style={styles.mediaUploadButton}
+                                style={[
+                                    styles.mediaUploadButton,
+                                    exerciseData.mediaUri && styles.mediaUploadButtonSelected
+                                ]}
                                 onPress={pickMedia}
                             >
                                 <Ionicons
@@ -262,8 +349,11 @@ export default function AdminViewScreen() {
                                     size={24}
                                     color={exerciseData.mediaUri ? '#8B5CF6' : '#666'}
                                 />
-                                <Text style={styles.mediaUploadText}>
-                                    {exerciseData.mediaUri ? 'Media Selected' : 'Upload Audio/Video'}
+                                <Text style={[
+                                    styles.mediaUploadText,
+                                    exerciseData.mediaUri && styles.mediaUploadTextSelected
+                                ]}>
+                                    {exerciseData.mediaUri ? 'Media Selected (Optional)' : 'Upload Audio/Video (Optional)'}
                                 </Text>
                             </TouchableOpacity>
 
@@ -416,6 +506,103 @@ export default function AdminViewScreen() {
                 </KeyboardAvoidingView>
             </Modal>
 
+            <Modal
+                visible={emailModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setEmailModalVisible(false)}
+            >
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Add Student by Email</Text>
+                            <TouchableOpacity
+                                onPress={() => setEmailModalVisible(false)}
+                                style={styles.closeButton}
+                            >
+                                <Ionicons name="close" size={24} color="#666" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.modalBody}>
+                            <Text style={styles.label}>Student Email</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={emailInput}
+                                onChangeText={setEmailInput}
+                                placeholder="Enter student's email"
+                                placeholderTextColor="#666"
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                            />
+                        </View>
+
+
+                        <TouchableOpacity
+                            style={styles.submitButton}
+                            onPress={handleEmailSubmit}
+                        >
+                            <Text style={styles.submitButtonText}>Add Student</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {addStudentMenuVisible && (
+                <Modal
+                    visible={addStudentMenuVisible}
+                    animationType="slide"
+                    transparent={true}
+                    onRequestClose={toggleAddStudentMenu}
+                >
+                    <View style={styles.modalContainer}>
+                        <Animated.View 
+                            style={[
+                                styles.menuContainer,
+                                {
+                                    transform: [
+                                        {
+                                            translateY: addStudentMenuAnimation.interpolate({
+                                                inputRange: [0, 1],
+                                                outputRange: [100, 0],
+                                            }),
+                                        },
+                                    ],
+                                    opacity: addStudentMenuAnimation,
+                                },
+                            ]}
+                        >
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Add Student</Text>
+                                <TouchableOpacity
+                                    onPress={toggleAddStudentMenu}
+                                    style={styles.closeButton}
+                                >
+                                    <Ionicons name="close" size={24} color="#666" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <TouchableOpacity 
+                                style={styles.menuItem}
+                                onPress={handleAddByEmail}
+                            >
+                                <Ionicons name="mail-outline" size={24} color="#1a1a1a" />
+                                <Text style={styles.menuItemText}>Add by Email</Text>
+                            </TouchableOpacity>
+
+                            <View style={styles.menuDivider} />
+
+                            <TouchableOpacity 
+                                style={styles.menuItem}
+                                onPress={handleCopyClassCode}
+                            >
+                                <Ionicons name="copy-outline" size={24} color="#1a1a1a" />
+                                <Text style={styles.menuItemText}>Copy Class Code</Text>
+                            </TouchableOpacity>
+                        </Animated.View>
+                    </View>
+                </Modal>
+            )}
 
         </View>
     );
@@ -450,87 +637,108 @@ const styles = StyleSheet.create({
         height: 200,
         resizeMode: 'cover',
     },
-    classInfo: {
+    mainContent: {
         padding: 16,
+    },
+    classInfo: {
         backgroundColor: '#fff',
-        margin: 16,
-        borderRadius: 12,
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 24,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowRadius: 8,
         elevation: 3,
     },
     className: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1a1a1a',
-        marginBottom: 8,
-    },
-    instructorName: {
-        fontSize: 16,
-        color: '#666',
-        marginBottom: 4,
-    },
-    classTime: {
-        fontSize: 16,
-        color: '#666',
-    },
-    actionButtons: {
-        padding: 16,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    button: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 12,
-        borderRadius: 8,
-        flex: 1,
-        marginHorizontal: 8,
-    },
-    editButton: {
-        backgroundColor: '#8B5CF6',
-    },
-    viewButton: {
-        backgroundColor: '#3B82F6',
-    },
-    buttonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
-        marginLeft: 8,
-    },
-    statsSection: {
-        padding: 16,
-    },
-    sectionTitle: {
-        fontSize: 18,
+        fontSize: 28,
         fontWeight: 'bold',
         color: '#1a1a1a',
         marginBottom: 16,
     },
-    statCard: {
-        backgroundColor: '#fff',
+    classDetails: {
+        gap: 12,
+    },
+    detailRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    detailText: {
+        fontSize: 16,
+        color: '#666',
+    },
+    section: {
+        marginBottom: 24,
+    },
+    sectionTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#1a1a1a',
+        marginBottom: 16,
+    },
+    buttonContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+    },
+    button: {
+        flex: 1,
+        minWidth: '45%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
         padding: 16,
         borderRadius: 12,
-        marginBottom: 12,
+        gap: 8,
+    },
+    primaryButton: {
+        backgroundColor: '#8B5CF6',
+    },
+    secondaryButton: {
+        backgroundColor: '#6B7280',
+    },
+    buttonText: {
+        color: '#fff',
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    statsGrid: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    statCard: {
+        flex: 1,
+        backgroundColor: '#fff',
+        padding: 20,
+        borderRadius: 16,
+        alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowRadius: 8,
         elevation: 3,
     },
+    statIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: '#F3F4F6',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+    },
     statNumber: {
-        fontSize: 28,
+        fontSize: 32,
         fontWeight: 'bold',
-        color: '#8B5CF6',
+        color: '#1a1a1a',
         marginBottom: 4,
     },
     statLabel: {
         fontSize: 14,
         color: '#666',
+        textAlign: 'center',
     },
     centerContent: {
         justifyContent: 'center',
@@ -667,5 +875,43 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#666',
         marginTop: 4,
+    },
+    modalBody: {
+        padding: 16,
+    },
+    menuContainer: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 16,
+        maxHeight: '90%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e5e5e5',
+    },
+    menuItemText: {
+        marginLeft: 8,
+        fontSize: 16,
+        color: '#1a1a1a',
+    },
+    menuDivider: {
+        height: 1,
+        backgroundColor: '#e5e5e5',
+        marginVertical: 12,
+    },
+    mediaUploadButtonSelected: {
+        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    },
+    mediaUploadTextSelected: {
+        color: '#8B5CF6',
     },
 }); 

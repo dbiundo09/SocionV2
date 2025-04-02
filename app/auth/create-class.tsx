@@ -74,7 +74,6 @@ export default function CreateClassScreen() {
         time: formData.time.trim(),
         image: formData.image
       };
-      console.log('Sending class data:', classData);
       await createClass(classData);
       Alert.alert('Success', 'Class created successfully');
       router.replace('/auth/classes');

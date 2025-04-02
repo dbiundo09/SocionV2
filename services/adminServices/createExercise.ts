@@ -4,8 +4,8 @@ import { handleUnauthorizedError } from '@/services/authServices/handleUnauthori
 const apiUrl: string = process.env.API_URL || 'http://localhost:8000';
 
 interface ExerciseCreate {
-  mediaUri: string;
-  mediaType: string;
+  mediaUri?: string;
+  mediaType?: string;
   duration: string;
   startDate: string;
   endDate: string;
@@ -15,8 +15,8 @@ interface ExerciseCreate {
 }
 
 export default async function createExercise(exerciseData: ExerciseCreate) {
-  console.log(exerciseData);
   try {
+
     const auth = getAuth();
     const user = auth.currentUser;
 
@@ -28,13 +28,15 @@ export default async function createExercise(exerciseData: ExerciseCreate) {
     // Create form data for multipart/form-data request
     const formData = new FormData();
     
-    // Append the media file
-    const filename = exerciseData.mediaUri.split('/').pop() || 'file';
-    formData.append('file', {
-      uri: exerciseData.mediaUri,
-      type: exerciseData.mediaType.includes('video') ? 'video/mp4' : 'audio/mpeg',
-      name: filename,
-    } as any);
+    // Only append media file if it exists
+    if (exerciseData.mediaUri && exerciseData.mediaType) {
+      const filename = exerciseData.mediaUri.split('/').pop() || 'file';
+      formData.append('file', {
+        uri: exerciseData.mediaUri,
+        type: exerciseData.mediaType.includes('video') ? 'video/mp4' : 'audio/mpeg',
+        name: filename,
+      } as any);
+    }
 
     // Append other exercise data
     formData.append('duration', exerciseData.duration);

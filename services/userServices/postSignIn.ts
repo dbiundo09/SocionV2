@@ -26,7 +26,6 @@ export default async function postSignIn() {
     }
 
     const data = await response.json();
-    console.log('User profile:', data);
     return data;
   } catch (error) {
     console.error('Error fetching user profile:', error);

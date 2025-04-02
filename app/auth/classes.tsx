@@ -33,6 +33,7 @@ export default function ClassesScreen() {
   const [classCode, setClassCode] = useState('');
   const [joining, setJoining] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const isDarkMode = useColorScheme() === 'dark';
 
   useEffect(() => {
     fetchClasses();
@@ -61,7 +62,6 @@ export default function ClassesScreen() {
   };
  
   const handleJoinClass = async () => {
-    console.log("classCode:", classCode);
     Keyboard.dismiss();
     if (!classCode.trim()) {
       Alert.alert('Error', 'Please enter a class code');
@@ -92,57 +92,65 @@ export default function ClassesScreen() {
     }
   }, []);
 
-  const renderClassList = (classes: ClassItem[], title: string) => (
+  const renderSection = ({ title, data }: { title: string; data: ClassItem[] }) => (
     <View style={styles.sectionContainer}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      <FlatList
-        data={classes}
-        renderItem={({ item: classItem }) => (
-          <TouchableOpacity 
-            key={classItem.id}
-            style={styles.classCard}
-            onPress={() => {
-              if (title === "Classes You Teach") {
-                router.push({
-                  pathname: '/auth/admin-view',
-                  params: { classId: classItem.id }
-                });
-              } else {
-                router.push({
-                  pathname: '/auth/home',
-                  params: { classId: classItem.id }
-                });
-              }
-            }}
+      {data.map((classItem) => (
+        <TouchableOpacity 
+          key={classItem.id}
+          style={styles.classCard}
+          onPress={() => {
+            if (title === "Classes You Teach") {
+              router.push({
+                pathname: '/auth/admin-view',
+                params: { classId: classItem.id }
+              });
+            } else {
+              router.push({
+                pathname: '/auth/home',
+                params: { classId: classItem.id }
+              });
+            }
+          }}
+        >
+          <ImageBackground
+            source={{ uri: classItem.image }}
+            style={styles.cardBackground}
+            imageStyle={styles.cardBackgroundImage}
           >
-            <ImageBackground
-              source={{ uri: classItem.image }}
-              style={styles.cardBackground}
-              imageStyle={styles.cardBackgroundImage}
-            >
-              <View style={styles.cardContent}>
-                <Text style={styles.className}>{classItem.name}</Text>
-                <Text style={styles.classInstructor}>{classItem.instructor}</Text>
-                <Text style={styles.classTime}>{classItem.time}</Text>
-              </View>
-            </ImageBackground>
-          </TouchableOpacity>
-        )}
-        keyExtractor={item => item.id.toString()}
-        contentContainerStyle={styles.listContainer}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#6b5b9e']}
-            tintColor="#6b5b9e"
-            size={50}
-            progressViewOffset={50}
-          />
-        }
-      />
+            <View style={styles.cardContent}>
+              <Text style={styles.className}>{classItem.name}</Text>
+              <Text style={styles.classInstructor}>{classItem.instructor}</Text>
+              <Text style={styles.classTime}>{classItem.time}</Text>
+            </View>
+          </ImageBackground>
+        </TouchableOpacity>
+      ))}
     </View>
   );
+
+  const renderContent = () => {
+    if (ownedClasses.length === 0 && enrolledClasses.length === 0) {
+      return (
+        <View style={styles.emptyStateContainer}>
+          <Ionicons name="add-circle-outline" size={48} color="#8B5CF6" style={styles.emptyStateIcon} />
+          <Text style={[styles.emptyStateText, { color: isDarkMode ? '#fff' : '#1a1a1a' }]}>
+            No classes found
+          </Text>
+          <Text style={[styles.emptyStateSubtext, { color: isDarkMode ? '#ccc' : '#666' }]}>
+            Tap the purple + button in the bottom right to create or join a class
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <>
+        {ownedClasses.length > 0 && renderSection({ title: "Classes You Teach", data: ownedClasses })}
+        {enrolledClasses.length > 0 && renderSection({ title: "Enrolled Classes", data: enrolledClasses })}
+      </>
+    );
+  };
 
   if (loading) {
     return (
@@ -164,17 +172,21 @@ export default function ClassesScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView}>
-        {ownedClasses.length > 0 && renderClassList(ownedClasses, "Classes You Teach")}
-        {enrolledClasses.length > 0 && renderClassList(enrolledClasses, "Enrolled Classes")}
-
-        {ownedClasses.length === 0 && enrolledClasses.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No classes found</Text>
-            <Text style={styles.emptyStateSubtext}>Join or create a class to get started</Text>
-          </View>
-        )}
-      </ScrollView>
+      <FlatList
+        data={[{ key: 'content' }]}
+        renderItem={() => renderContent()}
+        contentContainerStyle={styles.listContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#6b5b9e']}
+            tintColor="#6b5b9e"
+            size={50}
+            progressViewOffset={50}
+          />
+        }
+      />
 
       {menuVisible && (
         <TouchableOpacity 
@@ -393,20 +405,27 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     marginBottom: 12,
   },
-  emptyState: {
-    alignItems: 'center',
+  emptyStateContainer: {
+    flex: 1,
     justifyContent: 'center',
-    paddingVertical: 32,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: 40,
+  },
+  emptyStateIcon: {
+    marginBottom: 16,
   },
   emptyStateText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
-    color: '#1a1a1a',
+    textAlign: 'center',
     marginBottom: 8,
   },
   emptyStateSubtext: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    maxWidth: 300,
   },
   overlay: {
     position: 'absolute',

@@ -8,12 +8,14 @@ import {
   Animated,
   Easing,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { CountdownCircleTimer } from 'react-native-countdown-circle-timer';
 import { Exercise } from '@/app/types/exercise';
 import getMedia from '@/services/userServices/getMedia';
+import markCompleted from '@/services/userServices/markCompleted';
 import { Video, ResizeMode } from 'expo-av';
 import { Audio } from 'expo-av';
 
@@ -32,6 +34,7 @@ export default function ExerciseDetails() {
   const [mediaData, setMediaData] = useState<{ content: string; media_type: string } | null>(null);
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const videoRef = useRef<Video>(null);
   const audioRef = useRef<Audio.Sound | null>(null);
   
@@ -55,8 +58,15 @@ export default function ExerciseDetails() {
     duration: 1500 + Math.random() * 1000,
   }));
 
+
+  const progressAnimation = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
-    loadMedia();
+    // Only attempt to load media if there's a video or audio URL
+    if (exerciseData?.video_url || exerciseData?.audio_url) {
+      loadMedia();
+    }
+    
     return () => {
       // Cleanup media resources
       if (audioRef.current) {
@@ -74,22 +84,38 @@ export default function ExerciseDetails() {
     try {
       setIsLoadingMedia(true);
       setMediaError(null);
+      setLoadingProgress(0);
+
       const media = await getMedia(exerciseData.exercise_id);
-      setMediaData(media);
+      
+      if (!media || !media.content) {
+        throw new Error('No media content received');
+      }
+
+      // Ensure the URL is properly formatted
+      const mediaUrl = media.content.startsWith('http') ? media.content : `https://${media.content}`;
+
+      setMediaData({
+        ...media,
+        content: mediaUrl
+      });
       
       // If it's audio, prepare the sound
-      
       if (media.media_type.startsWith('audio/')) {
         const { sound } = await Audio.Sound.createAsync(
-          { uri: media.content },
+          { uri: mediaUrl },
           { shouldPlay: false }
         );
         audioRef.current = sound;
       }
-    } catch (error) {
-      setMediaError('Failed to load media');
+
+      setIsLoadingMedia(false);
+    } catch (error: any) {
       console.error('Error loading media:', error);
-    } finally {
+      // Only set error if it's not a 404 (no media found)
+      if (error?.response?.status !== 404) {
+        setMediaError('Failed to load media');
+      }
       setIsLoadingMedia(false);
     }
   };
@@ -220,14 +246,6 @@ export default function ExerciseDetails() {
   };
 
   const renderMediaPlayer = () => {
-    if (isLoadingMedia) {
-      return (
-        <View style={styles.mediaContainer}>
-          <ActivityIndicator size="large" color="#6b5b9e" />
-        </View>
-      );
-    }
-
     if (mediaError) {
       return (
         <View style={styles.mediaContainer}>
@@ -236,40 +254,73 @@ export default function ExerciseDetails() {
       );
     }
 
-    if (!mediaData) return null;
-
-    if (mediaData.media_type.startsWith('video/')) {
-      return (
-        <View style={styles.mediaContainer}>
-          <Video
-            ref={videoRef}
-            source={{ uri: mediaData.content }}
-            style={styles.video}
-            useNativeControls
-            resizeMode={ResizeMode.CONTAIN}
-            isLooping
-          />
-        </View>
-      );
-    }
-
-    if (mediaData.media_type.startsWith('audio/')) {
-      return (
-        <View style={styles.mediaContainer}>
-          <View style={styles.audioPlayer}>
-            <Ionicons name="musical-notes" size={40} color="#6b5b9e" />
+    if (mediaData) {
+      if (mediaData.media_type.startsWith('video/')) {
+        return (
+          <View style={styles.mediaContainer}>
+            <Video
+              ref={videoRef}
+              source={{ uri: mediaData.content }}
+              style={styles.video}
+              useNativeControls
+              resizeMode={ResizeMode.CONTAIN}
+              isLooping
+              onError={(error) => {
+                console.error('Video playback error:', error);
+                setMediaError('Failed to play video');
+              }}
+              onLoad={() => {
+                console.log('Video loaded successfully');
+              }}
+              shouldPlay={false}
+              isMuted={false}
+            />
           </View>
-        </View>
-      );
+        );
+      }
+
+      if (mediaData.media_type.startsWith('audio/')) {
+        return (
+          <View style={styles.mediaContainer}>
+            <View style={styles.audioPlayer}>
+              <Ionicons name="musical-notes" size={40} color="#6b5b9e" />
+            </View>
+          </View>
+        );
+      }
     }
 
-    return null;
+    // Show description for read-through meditation
+    return (
+      <View style={styles.mediaContainer}>
+        <View style={styles.descriptionContainer}>
+          <View style={styles.descriptionHeader}>
+            <Ionicons name="book-outline" size={24} color="#6b5b9e" />
+            <Text style={styles.descriptionTitle}>Read Through Meditation</Text>
+          </View>
+          <ScrollView style={styles.descriptionScroll}>
+            <Text style={styles.descriptionText}>{exerciseData.exercise_description}</Text>
+          </ScrollView>
+        </View>
+      </View>
+    );
   };
 
   if (!exerciseData) {
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>No exercise data available</Text>
+      </View>
+    );
+  }
+
+  if (isLoadingMedia) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading Meditation</Text>
+          <ActivityIndicator size="large" color="#6b5b9e" />
+        </View>
       </View>
     );
   }
@@ -289,143 +340,127 @@ export default function ExerciseDetails() {
         <View style={{ width: 24 }} />
       </View>
 
-      <View style={{height: 100}} />
-      
-      {/* Timer Circle */}
-      <View style={styles.timerContainer}>
-        {/* Purple fill circle that shows on completion */}
-        {isComplete && (
-          <Animated.View 
-            style={[
-              styles.completionCircle,
-              {
-                transform: [
-                  { scale: rippleScale },
-                ],
-                opacity: opacity,
-                backgroundColor: '#6b5b9e',
-              }
-            ]} 
-          />
-        )}
-        
-        {/* Particles for explosion effect */}
-        {showParticles && particles.map((particle, index) => (
-          <Animated.View
-            key={index}
-            style={[
-              styles.particle,
-              {
-                width: particle.size,
-                height: particle.size,
-                borderRadius: particle.size / 2,
-                backgroundColor: particle.color,
-                opacity: particle.opacity,
-                transform: [
-                  { translateX: particle.position.x },
-                  { translateY: particle.position.y },
-                  { scale: particle.scale },
-                  { rotate: particle.rotation.interpolate({
-                    inputRange: [-1, 1],
-                    outputRange: ['-360deg', '360deg']
-                  })}
-                ],
-              }
-            ]}
-          />
-        ))}
-      
-        <CountdownCircleTimer
-          isPlaying={isPlaying}
-          duration={exerciseData.time}
-          colors="#6b5b9e"
-          size={CIRCLE_SIZE}
-          strokeWidth={15}
-          trailColor="#e6e6e6"
-          rotation="counterclockwise"
-          onComplete={() => {
-            setIsPlaying(false);
-            startRippleAnimation();
-            return { shouldRepeat: false }
-          }}
-        >
-          {({ remainingTime }) => (
-            !hasStarted ? (
-              <TouchableOpacity 
-                style={[styles.playButton, isLoadingMedia && styles.disabledButton]}
-                onPress={togglePlayPause}
-                disabled={isLoadingMedia}
-              >
-                {isLoadingMedia ? (
-                  <ActivityIndicator size="large" color="#6b5b9e" />
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Timer Circle */}
+        <View style={styles.timerSection}>
+          <View style={styles.timerContainer}>
+            {/* Purple fill circle that shows on completion */}
+            {isComplete && (
+              <Animated.View 
+                style={[
+                  styles.completionCircle,
+                  {
+                    transform: [
+                      { scale: rippleScale },
+                    ],
+                    opacity: opacity,
+                    backgroundColor: '#6b5b9e',
+                  }
+                ]} 
+              />
+            )}
+            
+            {/* Particles for explosion effect */}
+            {showParticles && particles.map((particle, index) => (
+              <Animated.View
+                key={index}
+                style={[
+                  styles.particle,
+                  {
+                    width: particle.size,
+                    height: particle.size,
+                    borderRadius: particle.size / 2,
+                    backgroundColor: particle.color,
+                    opacity: particle.opacity,
+                    transform: [
+                      { translateX: particle.position.x },
+                      { translateY: particle.position.y },
+                      { scale: particle.scale },
+                      { rotate: particle.rotation.interpolate({
+                        inputRange: [-1, 1],
+                        outputRange: ['-360deg', '360deg']
+                      })}
+                    ],
+                  }
+                ]}
+              />
+            ))}
+          
+            <CountdownCircleTimer
+              isPlaying={isPlaying}
+              duration={exerciseData.time}
+              colors="#6b5b9e"
+              size={CIRCLE_SIZE}
+              strokeWidth={15}
+              trailColor="#e6e6e6"
+              rotation="counterclockwise"
+              onComplete={() => {
+                setIsPlaying(false);
+                startRippleAnimation();
+                return { shouldRepeat: false }
+              }}
+            >
+              {({ remainingTime }) => (
+                !hasStarted ? (
+                  <TouchableOpacity 
+                    style={styles.playButton}
+                    onPress={togglePlayPause}
+                  >
+                    <Ionicons name="play" size={50} color="#6b5b9e" />
+                  </TouchableOpacity>
                 ) : (
-                  <Ionicons name="play" size={50} color="#6b5b9e" />
-                )}
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.timeDisplay}>
-                <Text style={styles.timeText}>
-                  {remainingTime === 0 && isComplete ? "Done!" : formatTime(remainingTime)}
-                </Text>
-                <Text style={styles.exerciseTitle}>{exerciseData.exercise_name}</Text>
-              </View>
-            )
-          )}
-        </CountdownCircleTimer>
-      </View>
-
-      {/* Media Player */}
-      {renderMediaPlayer()}
-
-      {/* Audio Visualization - Only show after meditation has started */}
-      {hasStarted && !isComplete && !mediaData && (
-        <View style={styles.audioVisualization}>
-          {/* Simple audio waveform visualization */}
-          {Array.from({ length: 40 }).map((_, index) => (
-            <View 
-              key={index} 
-              style={[
-                styles.waveformBar,
-                { 
-                  height: 10 + Math.random() * 40,
-                  backgroundColor: isPlaying ? 
-                    (index % 3 === 0 ? '#6b5b9e' : '#d2cce6') : 
-                    '#d2cce6'
-                }
-              ]} 
-            />
-          ))}
+                  <View style={styles.timeDisplay}>
+                    <Text style={styles.timeText}>
+                      {remainingTime === 0 && isComplete ? "Done!" : formatTime(remainingTime)}
+                    </Text>
+                    <Text style={styles.exerciseTitle}>{exerciseData.exercise_name}</Text>
+                  </View>
+                )
+              )}
+            </CountdownCircleTimer>
+          </View>
         </View>
-      )}
 
-      {/* Control Button - Only show after meditation has started and not completed */}
-      {hasStarted && !isComplete && (
-        <TouchableOpacity 
-          style={[styles.controlButton, isLoadingMedia && styles.disabledButton]}
-          onPress={togglePlayPause}
-          disabled={isLoadingMedia}
-        >
-          {isLoadingMedia ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
+        {/* Media Player */}
+        {renderMediaPlayer()}
+
+        {/* Control Button - Only show after meditation has started and not completed */}
+        {hasStarted && !isComplete && (
+          <TouchableOpacity 
+            style={styles.controlButton}
+            onPress={togglePlayPause}
+          >
             <Ionicons 
               name={isPlaying ? "pause" : "play"} 
               size={24} 
               color="white" 
             />
-          )}
-        </TouchableOpacity>
-      )}
+          </TouchableOpacity>
+        )}
 
-      {/* Done button - Show after completion */}
-      {isComplete && (
-        <TouchableOpacity 
-          style={styles.doneButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.doneButtonText}>Done</Text>
-        </TouchableOpacity>
-      )}
+        {/* Done button - Show after completion */}
+        {isComplete && (
+          <TouchableOpacity 
+            style={styles.doneButton}
+            onPress={async () => {
+              try {
+                if (exerciseData.exercise_id) {
+                  await markCompleted(exerciseData.exercise_id);
+                }
+                router.back();
+              } catch (error) {
+                console.error('Error marking exercise as complete:', error);
+              }
+            }}
+          >
+            <Text style={styles.doneButtonText}>Done</Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
     </View>
   );
 }
@@ -434,8 +469,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    alignItems: 'center',
-    paddingHorizontal: 20,
     paddingTop: 50,
   },
   header: {
@@ -443,7 +476,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 40,
+    paddingHorizontal: 20,
+    marginBottom: 20,
   },
   logoContainer: {
     alignItems: 'center',
@@ -455,13 +489,18 @@ const styles = StyleSheet.create({
     fontSize: 30, 
     color: '#6b5b9e',
   },
+  timerSection: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
   timerContainer: {
     width: CIRCLE_SIZE,
     height: CIRCLE_SIZE,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-    marginVertical: 20,
   },
   completionCircle: {
     position: 'absolute',
@@ -519,6 +558,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 30,
+    alignSelf: 'center',
   },
   doneButton: {
     width: 120,
@@ -528,6 +568,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 30,
+    alignSelf: 'center',
   },
   doneButtonText: {
     color: 'white',
@@ -543,13 +584,13 @@ const styles = StyleSheet.create({
   mediaContainer: {
     width: '100%',
     alignItems: 'center',
-    marginTop: 20,
     paddingHorizontal: 20,
   },
   video: {
     width: width - 40,
     height: 200,
     borderRadius: 12,
+    backgroundColor: '#000', // Add background color for video container
   },
   audioPlayer: {
     width: width - 40,
@@ -563,5 +604,70 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.5,
+  },
+  descriptionContainer: {
+    width: '100%',
+    backgroundColor: 'rgba(107, 91, 158, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 20,
+    height: 200,
+  },
+  descriptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  descriptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6b5b9e',
+  },
+  descriptionScroll: {
+    flex: 1,
+    height: 120,
+  },
+  descriptionText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#666',
+    textAlign: 'left',
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingContainer: {
+    width: '80%',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6b5b9e',
+    marginBottom: 16,
+  },
+  progressBarContainer: {
+    width: '100%',
+    height: 4,
+    backgroundColor: 'rgba(107, 91, 158, 0.1)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#6b5b9e',
+    borderRadius: 2,
+  },
+  progressText: {
+    fontSize: 14,
+    color: '#6b5b9e',
+    marginTop: 8,
   },
 });

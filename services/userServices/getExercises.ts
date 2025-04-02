@@ -1,14 +1,12 @@
 import { getAuth } from "@react-native-firebase/auth";
 import { handleUnauthorizedError } from '@/services/authServices/handleUnauthorized';
 import { Exercise } from '@/app/types/exercise';
+import { ExerciseListResponse } from '@/app/types/exercise';
 
 const apiUrl: string = process.env.API_URL || 'http://localhost:8000';
 
-interface ExerciseListResponse {
-    exercises: Exercise[];
-}
 
-export default async function getExercises(classId?: string): Promise<Exercise[]> {
+export default async function getExercises(classId?: string): Promise<ExerciseListResponse> {
     try {
         const user = getAuth().currentUser;
         if (!user) {
@@ -32,7 +30,7 @@ export default async function getExercises(classId?: string): Promise<Exercise[]
 
         if (response.status === 401) {
             await handleUnauthorizedError(new Error('Unauthorized'));
-            return [];
+            return { exercises: [], streak: 0, completed_exercises: 0 };
         }
 
         if (!response.ok) {
@@ -40,7 +38,7 @@ export default async function getExercises(classId?: string): Promise<Exercise[]
         }
 
         const data: ExerciseListResponse = await response.json();
-        return data.exercises;
+        return data;
     } catch (error) {
         console.error('Error fetching exercises:', error);
         throw error;

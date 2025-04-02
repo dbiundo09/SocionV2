@@ -11,12 +11,12 @@ const DARK_MODE_BACKGROUND = 'rgb(41, 44, 47)';
 
 const theme = {
   light: {
-    background: 'rgb(248, 245, 252)',
-    text: '#000',
-    cardBackground: 'rgb(213, 205, 233)',
+    background: '#f5f5f5',
+    text: '#1a1a1a',
+    cardBackground: '#fff',
     subtitleText: '#666',
     trackingBox: 'rgb(144, 117, 197)',
-    separator: 'rgba(255, 255, 255, 0.5)',
+    separator: '#e5e5e5',
   },
   dark: {
     background: DARK_MODE_BACKGROUND,
@@ -41,6 +41,8 @@ export default function HomeScreen() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [streak, setStreak] = useState<number>(0);
+  const [completedExercises, setCompletedExercises] = useState<number>(0);
   const activeTheme = isDarkMode ? theme.dark : theme.light;
 
   useEffect(() => {
@@ -53,7 +55,9 @@ export default function HomeScreen() {
     try {
       setLoading(true);
       const data = await getExercises(classId);
-      setExercises(data);
+      setExercises(data.exercises);
+      setStreak(data.streak);
+      setCompletedExercises(data.completed_exercises);
     } catch (error) {
       console.error('Error loading exercises:', error);
     } finally {
@@ -84,6 +88,32 @@ export default function HomeScreen() {
     });
   };
 
+  const formatDateRange = (startDate: string, endDate: string): string => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // If dates are the same, just show one date
+    if (start.toDateString() === end.toDateString()) {
+      if (start.toDateString() === today.toDateString()) {
+        return 'Today';
+      } else if (start.toDateString() === tomorrow.toDateString()) {
+        return 'Tomorrow';
+      }
+      return formatDate(startDate);
+    }
+
+    // If dates are different, show the range
+    if (start.toDateString() === today.toDateString()) {
+      return `Today - ${formatDate(endDate)}`;
+    } else if (start.toDateString() === tomorrow.toDateString()) {
+      return `Tomorrow - ${formatDate(endDate)}`;
+    }
+    return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+  };
+
   const truncateText = (text: string | null, maxLength: number = 100): string => {
     if (!text) return 'No description available';
     if (text.length <= maxLength) return text;
@@ -91,39 +121,55 @@ export default function HomeScreen() {
   };
 
   const renderExercise = ({ item }: { item: Exercise }) => (
-    <View style={[styles.dailyItem, { backgroundColor: activeTheme.cardBackground }]}>
-      <TouchableOpacity
-        style={styles.dailyTextContainer}
-        onPress={() => {
-          console.log("Pressed")
-          console.log(item)
-          router.push({
-            pathname: '/auth/exercise-details',
-            params: { exercise: JSON.stringify(item) }
-          });
-        }}
-      >
-        <Text style={[styles.dailyTitle, { color: activeTheme.text }]}>{item.exercise_name}</Text>
-        <Text style={[styles.dailySubtitle, { color: activeTheme.subtitleText }]}>
-          {truncateText(item.exercise_description)}
-        </Text>
-        <View style={styles.exerciseDetails}>
+    <TouchableOpacity
+      style={[styles.exerciseCard, { backgroundColor: activeTheme.cardBackground }]}
+      onPress={() => {
+        router.push({
+          pathname: '/auth/exercise-details',
+          params: { exercise: JSON.stringify(item) }
+        });
+      }}
+    >
+      <View style={styles.exerciseHeader}>
+        <Text style={[styles.exerciseName, { color: activeTheme.text }]}>{item.exercise_name}</Text>
+        <Ionicons
+          name={
+            item.video_url ? 'videocam' :
+            item.audio_url ? 'musical-notes' :
+            'book-outline'
+          }
+          size={24}
+          color="#8B5CF6"
+        />
+      </View>
+      
+      <Text style={[styles.exerciseDescription, { color: activeTheme.subtitleText }]} numberOfLines={2}>
+        {truncateText(item.exercise_description)}
+      </Text>
+      
+      <View style={[styles.exerciseDetails, { borderTopColor: activeTheme.separator }]}>
+        <View style={styles.detailItem}>
+          <Ionicons name="time-outline" size={16} color={activeTheme.subtitleText} />
           <Text style={[styles.detailText, { color: activeTheme.subtitleText }]}>
-            Duration: {formatDuration(item.time)}
-          </Text>
-          <Text style={[styles.detailText, { color: activeTheme.subtitleText }]}>
-            {formatDate(item.start_time)} - {formatDate(item.end_time)}
+            {formatDuration(item.time)}
           </Text>
         </View>
-      </TouchableOpacity>
-      <TouchableOpacity>
-        <Ionicons
-          name="chevron-forward"
-          size={24}
-          color={activeTheme.text}
-        />
-      </TouchableOpacity>
-    </View>
+        
+        <View style={styles.detailItem}>
+          <Ionicons name="calendar-outline" size={16} color={activeTheme.subtitleText} />
+          <Text style={[styles.detailText, { color: activeTheme.subtitleText }]}>
+            {formatDateRange(item.start_time, item.end_time)}
+          </Text>
+        </View>
+
+        {!item.video_url && !item.audio_url && (
+          <View style={styles.detailItem}>
+            <Ionicons name="book-outline" size={16} color={activeTheme.subtitleText} />
+            <Text style={[styles.detailText, { color: activeTheme.subtitleText }]}>Read-through meditation</Text>
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
   );
 
   const handleBackPress = () => {
@@ -143,7 +189,7 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: activeTheme.background }]}>
+      <View style={[styles.container, styles.loadingContainer, { backgroundColor: activeTheme.background }]}>
         <ActivityIndicator size="large" color="#6b5b9e" />
       </View>
     );
@@ -152,75 +198,92 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: activeTheme.background }]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={handleBackPress}
-          style={styles.backButton}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color={activeTheme.text}
-          />
-        </TouchableOpacity>
-        <Text style={[styles.headerText, { color: activeTheme.text }]}>Exercises</Text>
-      </View>
-      <View style={[styles.headerRight]}>
-        <TouchableOpacity
-          style={styles.themeToggle}
-          onPress={() => setIsDarkMode(!isDarkMode)}
-        >
-          <Ionicons
-            name={isDarkMode ? 'sunny-outline' : 'moon-outline'}
-            size={24}
-            color={activeTheme.text}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.signOutButton} onPress={() => auth().signOut()} >
-          <Ionicons
-            name="log-out-outline"
-            size={24}
-            color={activeTheme.text}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('AccountInfo')}>
-          <Ionicons
-            name="person-circle-outline"
-            size={30}
-            color={activeTheme.text}
-          />
-        </TouchableOpacity>
+      <View style={styles.headerContainer}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={handleBackPress}
+            style={styles.backButton}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={activeTheme.text}
+            />
+          </TouchableOpacity>
+          <Text style={[styles.headerText, { color: activeTheme.text }]}>Exercises</Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={() => setIsDarkMode(!isDarkMode)}
+            >
+              <Ionicons
+                name={isDarkMode ? 'sunny-outline' : 'moon-outline'}
+                size={24}
+                color={activeTheme.text}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.headerButton} 
+              onPress={() => auth().signOut()} 
+            >
+              <Ionicons
+                name="log-out-outline"
+                size={24}
+                color={activeTheme.text}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.headerButton}
+              onPress={() => navigation.navigate('AccountInfo')}
+            >
+              <Ionicons
+                name="person-circle-outline"
+                size={24}
+                color={activeTheme.text}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
       <View style={[styles.trackingContainer, { backgroundColor: activeTheme.trackingBox }]}>
-        <View style={styles.trackingBox}>
-          <Text style={styles.trackingNumber}>{exercises.length}</Text>
-          <Text style={styles.trackingLabel}>Exercises</Text>
-        </View>
-        <View style={[styles.verticalSeparator, { backgroundColor: activeTheme.separator }]}></View>
-        <View style={styles.trackingBox}>
-          <Text style={styles.trackingNumber}>
-            {exercises.reduce((acc, exercise) => acc + exercise.time, 0)}
-          </Text>
-          <Text style={styles.trackingLabel}>Total Time</Text>
+        <View style={styles.statsContainer}>
+          <View style={styles.streakContainer}>
+            <View style={styles.streakIconContainer}>
+              <Ionicons name="flame" size={32} color="#fff" />
+            </View>
+            <View style={styles.streakTextContainer}>
+              <Text style={styles.streakNumber}>{streak}</Text>
+              <Text style={styles.streakLabel}>Day Streak</Text>
+            </View>
+          </View>
+          <View style={[styles.verticalSeparator, { backgroundColor: activeTheme.separator }]}></View>
+          <View style={styles.progressContainer}>
+            <View style={styles.progressTextContainer}>
+              <Text style={styles.progressNumber}>{completedExercises} / {exercises.length}</Text>
+              <Text style={styles.progressLabel}>Exercises Completed</Text>
+            </View>
+          </View>
         </View>
       </View>
-      <Text style={[styles.dailyChecklistTitle, { color: activeTheme.text }]}>Exercise List</Text>
-      <FlatList
-        data={exercises}
-        renderItem={renderExercise}
-        keyExtractor={item => item.exercise_id || ''}
-        contentContainerStyle={styles.listContainer}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#6b5b9e']}
-            tintColor="#6b5b9e"
-            size="large"
-            progressViewOffset={50}
-          />
-        }
-      />
+      <View style={styles.contentContainer}>
+        <Text style={[styles.dailyChecklistTitle, { color: activeTheme.text }]}>Exercise List</Text>
+        <FlatList
+          data={exercises}
+          renderItem={renderExercise}
+          keyExtractor={item => item.exercise_id || ''}
+          contentContainerStyle={styles.listContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#6b5b9e']}
+              tintColor="#6b5b9e"
+              size={50}
+              progressViewOffset={50}
+            />
+          }
+        />
+      </View>
     </View>
   );
 }
@@ -228,68 +291,106 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
     paddingTop: 48,
   },
-  centerContent: {
-    justifyContent: 'center',
-    alignItems: 'center',
+  headerContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    justifyContent: 'space-between',
   },
-  headerRight: {
+  headerText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
   },
-  headerText: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  headerButton: {
+    padding: 4,
   },
-  themeToggle: {
-    marginRight: 8,
-  },
-  signOutButton: {
-    marginRight: 8,
+  backButton: {
+    padding: 4,
   },
   trackingContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 30,
+    paddingVertical: 20,
+    paddingHorizontal: 24,
     borderRadius: 8,
-    marginBottom: 16,
+    marginHorizontal: 16,
+    marginVertical: 16,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  trackingBox: {
+  streakContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    width: '45%',
+    flex: 1,
   },
-  trackingNumber: {
-    fontSize: 50,
+  streakIconContainer: {
+    marginRight: 12,
+  },
+  streakTextContainer: {
+    alignItems: 'flex-start',
+  },
+  streakNumber: {
+    fontSize: 32,
     color: '#fff',
     fontFamily: 'Helvetica',
     fontWeight: 'bold',
+    lineHeight: 32,
   },
-  trackingLabel: {
-    fontSize: 16,
+  streakLabel: {
+    fontSize: 14,
+    color: '#fff',
+    fontFamily: 'Helvetica',
+    opacity: 0.9,
+    lineHeight: 16,
+  },
+  progressContainer: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  progressTextContainer: {
+    alignItems: 'flex-start',
+  },
+  progressNumber: {
+    fontSize: 32,
     color: '#fff',
     fontFamily: 'Helvetica',
     fontWeight: 'bold',
+    lineHeight: 32,
+  },
+  progressLabel: {
+    fontSize: 14,
+    color: '#fff',
+    fontFamily: 'Helvetica',
+    opacity: 0.9,
+    lineHeight: 16,
   },
   verticalSeparator: {
-    width: 3,
-    height: '120%',
+    width: 2,
+    height: '80%',
     backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    marginHorizontal: 16,
+  },
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
   },
   dailyChecklistTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginTop: 5,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   dailyItem: {
     flexDirection: 'row',
@@ -312,14 +413,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   exerciseDetails: {
-    marginTop: 8,
+    borderTopWidth: 1,
+    paddingTop: 12,
+    gap: 8,
   },
   detailText: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  backButton: {
-    marginRight: 16,
+    fontSize: 14,
   },
   listContainer: {
     paddingBottom: 16,
@@ -331,5 +430,40 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 24,
     fontWeight: 'bold',
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  exerciseCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  exerciseHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  exerciseName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  exerciseDescription: {
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 });

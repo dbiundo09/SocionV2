@@ -10,3 +10,9 @@ export interface Exercise {
     reps: number | null;
     time: number;
 }
+
+export interface ExerciseListResponse {
+    exercises: Exercise[];
+    streak: number;
+    completed_exercises: number;
+}
