@@ -123,7 +123,9 @@ export default function ViewExercisesScreen() {
                     <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Class Exercises</Text>
-                <View style={{ width: 24 }} />
+                <TouchableOpacity style={styles.backButton} disabled>
+                    <Ionicons name="arrow-back" size={24} color="transparent" />
+                </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.content}>
@@ -131,7 +133,10 @@ export default function ViewExercisesScreen() {
                     <TouchableOpacity
                         key={exercise.exercise_id}
                         style={styles.exerciseCard}
-                        onPress={() => router.push(`/auth/exercise-details/${exercise.class_id}`)}
+                        onPress={() => router.push({
+                            pathname: '/auth/admin-exercise-details',
+                            params: { exercise: JSON.stringify(exercise) }
+                        })}
                     >
                         <View style={styles.exerciseHeader}>
                             <Text style={styles.exerciseName}>{exercise.exercise_name}</Text>
@@ -191,14 +196,22 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingBottom: 16,
+        backgroundColor: '#f5f5f5',
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
     },
     headerTitle: {
         fontSize: 20,
         fontWeight: 'bold',
         color: '#1a1a1a',
+        flex: 1,
+        textAlign: 'center',
     },
     backButton: {
         padding: 8,
+        width: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     content: {
         flex: 1,

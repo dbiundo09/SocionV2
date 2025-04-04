@@ -231,7 +231,9 @@ export default function AdminViewScreen() {
                     <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Class Management</Text>
-                <View style={{ width: 24 }} />
+                <TouchableOpacity style={styles.backButton} disabled>
+                    <Ionicons name="arrow-back" size={24} color="transparent" />
+                </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.content}>
@@ -620,14 +622,22 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingBottom: 16,
-    },
-    backButton: {
-        padding: 8,
+        backgroundColor: '#f5f5f5',
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
     },
     headerTitle: {
         fontSize: 20,
         fontWeight: 'bold',
         color: '#1a1a1a',
+        flex: 1,
+        textAlign: 'center',
+    },
+    backButton: {
+        padding: 8,
+        width: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     content: {
         flex: 1,
