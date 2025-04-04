@@ -1,15 +1,14 @@
-export interface Exercise {
-    exercise_id: string | null;
-    audio_url: string | null;
-    video_url: string | null;
-    class_id: string;
-    end_time: string;
-    start_time: string;
-    exercise_description: string;
+export type Exercise = {
+    exercise_id: string;
     exercise_name: string;
-    reps: number | null;
+    exercise_description: string | null;
     time: number;
-}
+    start_time: string;
+    end_time: string;
+    video_url?: string | null;
+    audio_url?: string | null;
+    completed: boolean;
+};
 
 export interface ExerciseListResponse {
     exercises: Exercise[];

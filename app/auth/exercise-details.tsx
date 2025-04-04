@@ -443,7 +443,7 @@ export default function ExerciseDetails() {
         )}
 
         {/* Done button - Show after completion */}
-        {isComplete && (
+        {isComplete && !exerciseData.completed && (
           <TouchableOpacity 
             style={styles.doneButton}
             onPress={async () => {

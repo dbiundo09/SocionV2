@@ -16,7 +16,7 @@ const markCompleted = async (exerciseId: string): Promise<void> => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify(exerciseId)
+      body: JSON.stringify({ exercise_id: exerciseId })
     });
 
     if (response.status === 401) {

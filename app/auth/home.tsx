@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Text, View, StyleSheet, TouchableOpacity, FlatList, useColorScheme, ActivityIndicator, RefreshControl } from 'react-native';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { useNavigation, NavigationProp, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import auth from '@react-native-firebase/auth';
@@ -45,11 +45,21 @@ export default function HomeScreen() {
   const [completedExercises, setCompletedExercises] = useState<number>(0);
   const activeTheme = isDarkMode ? theme.dark : theme.light;
 
+  // Initial load
   useEffect(() => {
     if (classId) {
       loadExercises();
     }
   }, [classId]);
+
+  // Reload on focus (including back navigation)
+  useFocusEffect(
+    useCallback(() => {
+      if (classId) {
+        loadExercises();
+      }
+    }, [classId])
+  );
 
   const loadExercises = async () => {
     try {
@@ -57,6 +67,7 @@ export default function HomeScreen() {
       const data = await getExercises(classId);
       setExercises(data.exercises);
       setStreak(data.streak);
+      
       setCompletedExercises(data.completed_exercises);
     } catch (error) {
       console.error('Error loading exercises:', error);
@@ -122,7 +133,11 @@ export default function HomeScreen() {
 
   const renderExercise = ({ item }: { item: Exercise }) => (
     <TouchableOpacity
-      style={[styles.exerciseCard, { backgroundColor: activeTheme.cardBackground }]}
+      style={[
+        styles.exerciseCard,
+        { backgroundColor: activeTheme.cardBackground },
+        item.completed && styles.completedCard
+      ]}
       onPress={() => {
         router.push({
           pathname: '/auth/exercise-details',
@@ -132,15 +147,20 @@ export default function HomeScreen() {
     >
       <View style={styles.exerciseHeader}>
         <Text style={[styles.exerciseName, { color: activeTheme.text }]}>{item.exercise_name}</Text>
-        <Ionicons
-          name={
-            item.video_url ? 'videocam' :
-            item.audio_url ? 'musical-notes' :
-            'book-outline'
-          }
-          size={24}
-          color="#8B5CF6"
-        />
+        <View style={styles.headerIcons}>
+          {item.completed && (
+            <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+          )}
+          <Ionicons
+            name={
+              item.video_url ? 'videocam' :
+              item.audio_url ? 'musical-notes' :
+              'book-outline'
+            }
+            size={24}
+            color="#8B5CF6"
+          />
+        </View>
       </View>
       
       <Text style={[styles.exerciseDescription, { color: activeTheme.subtitleText }]} numberOfLines={2}>
@@ -465,5 +485,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  completedCard: {
+    opacity: 0.8,
+    borderColor: '#4CAF50',
+    borderWidth: 1,
   },
 });
