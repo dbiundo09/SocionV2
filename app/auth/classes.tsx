@@ -100,10 +100,14 @@ export default function ClassesScreen() {
           key={classItem.id}
           style={styles.classCard}
           onPress={() => {
+            console.log(classItem);
             if (title === "Classes You Teach") {
               router.push({
                 pathname: '/auth/admin-view',
-                params: { classId: classItem.id }
+                params: { 
+                  classId: classItem.id, 
+                  short_code: classItem.short_code || '' 
+                }
               });
             } else {
               router.push({

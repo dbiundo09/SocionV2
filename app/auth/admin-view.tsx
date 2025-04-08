@@ -31,7 +31,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 export default function AdminViewScreen() {
     const router = useRouter();
-    const { classId } = useLocalSearchParams();
+    const { classId, short_code } = useLocalSearchParams();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [classData, setClassData] = useState<ClassItem | null>(null);
@@ -206,7 +206,7 @@ export default function AdminViewScreen() {
     };
 
     const handleCopyClassCode = () => {
-        Clipboard.setString(classId as string);
+        Clipboard.setString(short_code as string);
         Alert.alert('Success', 'Class code copied to clipboard');
         toggleAddStudentMenu();
     };

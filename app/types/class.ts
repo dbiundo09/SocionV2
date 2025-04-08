@@ -6,4 +6,5 @@ export interface ClassItem {
   image: string;
   users?: number;
   num_exercises?: number;
+  short_code?: string;
 } 
