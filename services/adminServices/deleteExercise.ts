@@ -10,7 +10,7 @@ const deleteExercise = async (exerciseId: string) => {
       throw new Error('No authentication token available');
     }
 
-    const response = await fetch(apiUrl + `/admin/exercise/${exerciseId}`, {
+    const response = await fetch(apiUrl + `/admin/deleteExercise?exercise_id=${exerciseId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`

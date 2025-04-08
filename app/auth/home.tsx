@@ -65,9 +65,13 @@ export default function HomeScreen() {
     try {
       setLoading(true);
       const data = await getExercises(classId);
-      setExercises(data.exercises);
+      // Sort exercises to show incomplete ones first
+      const sortedExercises = data.exercises.sort((a, b) => {
+        if (a.completed === b.completed) return 0;
+        return a.completed ? 1 : -1;
+      });
+      setExercises(sortedExercises);
       setStreak(data.streak);
-      
       setCompletedExercises(data.completed_exercises);
     } catch (error) {
       console.error('Error loading exercises:', error);
@@ -287,22 +291,26 @@ export default function HomeScreen() {
       </View>
       <View style={styles.contentContainer}>
         <Text style={[styles.dailyChecklistTitle, { color: activeTheme.text }]}>Exercise List</Text>
-        <FlatList
-          data={exercises}
-          renderItem={renderExercise}
-          keyExtractor={item => item.exercise_id || ''}
-          contentContainerStyle={styles.listContainer}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={['#6b5b9e']}
-              tintColor="#6b5b9e"
-              size={50}
-              progressViewOffset={50}
-            />
-          }
-        />
+        {exercises.length === 0 ? (
+          <Text style={[styles.noExercisesText, { color: activeTheme.subtitleText }]}>No exercises available at the moment.</Text>
+        ) : (
+          <FlatList
+            data={exercises}
+            renderItem={renderExercise}
+            keyExtractor={item => item.exercise_id || ''}
+            contentContainerStyle={styles.listContainer}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#6b5b9e']}
+                tintColor="#6b5b9e"
+                size={50}
+                progressViewOffset={50}
+              />
+            }
+          />
+        )}
       </View>
     </View>
   );
@@ -495,5 +503,10 @@ const styles = StyleSheet.create({
     opacity: 0.8,
     borderColor: '#4CAF50',
     borderWidth: 1,
+  },
+  noExercisesText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 20,
   },
 });

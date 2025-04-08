@@ -30,7 +30,8 @@ export default async function getAdminInfo(classId: string) {
       throw new Error(error.message || 'Failed to fetch class info');
     }
 
-    return await response.json();
+    const res = await response.json();
+    return res;
   } catch (error) {
     if (handleUnauthorizedError(error)) {
       return null;

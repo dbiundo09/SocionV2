@@ -27,6 +27,8 @@ const markCompleted = async (exerciseId: string): Promise<void> => {
     if (!response.ok) {
       throw new Error('Failed to mark exercise as complete');
     }
+
+    return response.json();
   } catch (error) {
     console.error('Error marking exercise as complete:', error);
     throw error;

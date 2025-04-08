@@ -13,7 +13,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Exercise } from '@/app/types/exercise';
-
+import deleteExercise from '@/services/adminServices/deleteExercise';
+import updateExercise from '@/services/adminServices/updateExercise';
 const { width } = Dimensions.get('window');
 
 type ExerciseStats = {
@@ -40,6 +41,7 @@ export default function AdminExerciseDetails() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<ExerciseStats>(MOCK_STATS);
   const [editedExercise, setEditedExercise] = useState<Exercise | null>(exerciseData);
+  const [timeInput, setTimeInput] = useState<string>('');
 
   useEffect(() => {
     if (exerciseData) {
@@ -57,12 +59,18 @@ export default function AdminExerciseDetails() {
     if (!editedExercise) return;
     
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await updateExercise(editedExercise);
+      Alert.alert('Success', 'Exercise updated successfully');
+    } catch (error) {
+      console.error('Error updating exercise:', error);
+      Alert.alert('Error', 'Failed to update exercise');
+    } finally {
       setLoading(false);
       setIsEditing(false);
-      Alert.alert('Success', 'Exercise updated successfully');
-    }, 1000);
+    }
+    Alert.alert('Success', 'Exercise updated successfully');
+
   };
 
   const handleDelete = () => {
@@ -76,11 +84,9 @@ export default function AdminExerciseDetails() {
           style: 'destructive',
           onPress: () => {
             setLoading(true);
-            // Simulate API call
-            setTimeout(() => {
-              setLoading(false);
-              router.back();
-            }, 1000);
+            deleteExercise(exerciseData.exercise_id);
+            setLoading(false);
+            router.back();
           }
         }
       ]
@@ -88,9 +94,34 @@ export default function AdminExerciseDetails() {
   };
 
   const formatTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const parseTime = (timeString: string): number => {
+    const [hours, minutes, seconds] = timeString.split(':').map(Number);
+    return (hours * 3600) + (minutes * 60) + seconds;
+  };
+
+  const formatTimeInput = (input: string): string => {
+    // Remove all non-digits
+    const digits = input.replace(/\D/g, '');
+    
+    // Split into hours, minutes, seconds
+    const hours = digits.slice(0, 2);
+    const minutes = digits.slice(2, 4);
+    const seconds = digits.slice(4, 6);
+    
+    // Format with colons
+    let formatted = '';
+    if (hours) formatted += hours;
+    if (minutes) formatted += `:${minutes}`;
+    if (seconds) formatted += `:${seconds}`;
+    
+    return formatted;
   };
 
   if (!exerciseData) {
@@ -180,14 +211,29 @@ export default function AdminExerciseDetails() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Duration (seconds)</Text>
+                <Text style={styles.label}>Duration (HH:MM:SS)</Text>
                 <TextInput
                   style={styles.input}
-                  value={editedExercise?.time.toString()}
-                  onChangeText={(text) => 
-                    setEditedExercise(prev => prev ? {...prev, time: parseInt(text) || 0} : null)
-                  }
+                  value={timeInput}
+                  onChangeText={(text) => {
+                    // Allow deletion
+                    if (text.length < timeInput.length) {
+                      setTimeInput(text);
+                      return;
+                    }
+                    
+                    // Format the input
+                    const formatted = formatTimeInput(text);
+                    setTimeInput(formatted);
+                    
+                    // Update the exercise time if we have a complete time
+                    if (formatted.split(':').length === 3) {
+                      const seconds = parseTime(formatted);
+                      setEditedExercise(prev => prev ? {...prev, time: seconds} : null);
+                    }
+                  }}
                   keyboardType="numeric"
+                  placeholder="00:00:00"
                 />
               </View>
             </View>

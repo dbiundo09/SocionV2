@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -8,7 +8,7 @@ import {
     ActivityIndicator,
     Alert,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import getExercises from '@/services/adminServices/getExercises';
 import { Exercise } from '@/app/types/exercise';
@@ -20,11 +20,7 @@ export default function ViewExercisesScreen() {
     const [exercises, setExercises] = useState<Exercise[]>([]);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        loadExercises();
-    }, [id]);
-
-    const loadExercises = async () => {
+    const loadExercises = useCallback(async () => {
         if (!id) {
             setError('No class ID provided');
             setLoading(false);
@@ -42,7 +38,13 @@ export default function ViewExercisesScreen() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id]);
+
+    useFocusEffect(
+        useCallback(() => {
+            loadExercises();
+        }, [loadExercises])
+    );
 
     const formatDuration = (seconds: string) => {
         const totalSeconds = parseInt(seconds);

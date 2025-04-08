@@ -4,4 +4,6 @@ export interface ClassItem {
   instructor: string;
   time: string;
   image: string;
+  users?: number;
+  num_exercises?: number;
 } 

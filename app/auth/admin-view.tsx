@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -27,6 +27,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import createExercise from '@/services/adminServices/createExercise';
 import Clipboard from '@react-native-clipboard/clipboard';
 import addUserByEmail from '@/services/adminServices/addUserByEmail';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function AdminViewScreen() {
     const router = useRouter();
@@ -51,9 +52,11 @@ export default function AdminViewScreen() {
     const [emailInput, setEmailInput] = useState('');
     const addStudentMenuAnimation = React.useRef(new Animated.Value(0)).current;
 
+    // Initial load
     useEffect(() => {
         loadClassData();
     }, [classId]);
+
 
     const loadClassData = async () => {
         if (!classId) {
@@ -155,6 +158,9 @@ export default function AdminViewScreen() {
                 exerciseName: '',
                 exerciseDescription: '',
             });
+
+            // Refresh class data to show the new exercise
+            await loadClassData();
         } catch (error) {
             console.error('Error creating exercise:', error);
             Alert.alert('Error', 'Failed to create exercise');
@@ -189,6 +195,9 @@ export default function AdminViewScreen() {
             Alert.alert('Success', response.message);
             setEmailInput('');
             setEmailModalVisible(false);
+            
+            // Refresh class data to show the new student
+            await loadClassData();
         } catch (error) {
             Alert.alert('Error', error instanceof Error ? error.message : 'An unknown error occurred');
         } finally {
@@ -270,17 +279,6 @@ export default function AdminViewScreen() {
 
                             <TouchableOpacity 
                                 style={[styles.button, styles.secondaryButton]}
-                                onPress={() => router.push({
-                                    pathname: '/auth/view-exercises/[classId]',
-                                    params: { classId }
-                                })}
-                            >
-                                <Ionicons name="list-outline" size={24} color="#fff" />
-                                <Text style={styles.buttonText}>View Exercises</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity 
-                                style={[styles.button, styles.secondaryButton]}
                                 onPress={toggleAddStudentMenu}
                             >
                                 <Ionicons name="people-outline" size={24} color="#fff" />
@@ -292,20 +290,32 @@ export default function AdminViewScreen() {
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Class Statistics</Text>
                         <View style={styles.statsGrid}>
-                            <View style={styles.statCard}>
+                            <TouchableOpacity 
+                                style={styles.statCard}
+                                onPress={() => router.push({
+                                    pathname: '/auth/student-list',
+                                    params: { classId }
+                                })}
+                            >
                                 <View style={styles.statIconContainer}>
                                     <Ionicons name="people" size={24} color="#8B5CF6" />
                                 </View>
-                                <Text style={styles.statNumber}>42</Text>
+                                <Text style={styles.statNumber}>{classData.users || 0}</Text>
                                 <Text style={styles.statLabel}>Total Students</Text>
-                            </View>
-                            <View style={styles.statCard}>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                style={styles.statCard}
+                                onPress={() => router.push({
+                                    pathname: '/auth/view-exercises/[classId]',
+                                    params: { classId }
+                                })}
+                            >
                                 <View style={styles.statIconContainer}>
                                     <Ionicons name="checkmark-circle" size={24} color="#8B5CF6" />
                                 </View>
-                                <Text style={styles.statNumber}>89%</Text>
-                                <Text style={styles.statLabel}>Attendance Rate</Text>
-                            </View>
+                                <Text style={styles.statNumber}>{classData.num_exercises || 0}</Text>
+                                <Text style={styles.statLabel}>Active Exercises</Text>
+                            </TouchableOpacity>
                         </View>
                     </View>
                 </View>
@@ -729,6 +739,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 8,
         elevation: 3,
+        marginHorizontal: 8,
     },
     statIconContainer: {
         width: 48,

@@ -11,13 +11,18 @@ const updateExercise = async (exercise: Exercise) => {
       throw new Error('No authentication token available');
     }
 
-    const response = await fetch(apiUrl + `/admin/exercise/${exercise.exercise_id}`, {
-      method: 'PUT',
+    const formData = new FormData();
+    formData.append('exercise_id', exercise.exercise_id);
+    formData.append('exercise_name', exercise.exercise_name);
+    formData.append('exercise_description', exercise.exercise_description || '');
+    formData.append('duration', exercise.time.toString());
+
+    const response = await fetch(apiUrl + '/admin/updateExercise', {
+      method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify(exercise)
+      body: formData
     });
 
     if (response.status === 401) {
@@ -29,7 +34,7 @@ const updateExercise = async (exercise: Exercise) => {
       throw new Error('Failed to update exercise');
     }
 
-    return await response.json();
+    return await response.text();
   } catch (error) {
     console.error('Error updating exercise:', error);
     throw error;

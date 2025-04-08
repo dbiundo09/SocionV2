@@ -10,6 +10,7 @@ export default function Layout() {
         <Stack.Screen name="exercise-details" options={{headerShown: false}} />
         <Stack.Screen name="view-exercises/[id]" options={{headerShown: false}} />
         <Stack.Screen name="admin-exercise-details" options={{headerShown: false}} />
+        <Stack.Screen name="student-list" options={{headerShown: false}} />
     </Stack>
   );
 }
