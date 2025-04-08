@@ -130,58 +130,66 @@ export default function ViewExercisesScreen() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.content}>
-                {exercises.map((exercise) => (
-                    <TouchableOpacity
-                        key={exercise.exercise_id}
-                        style={styles.exerciseCard}
-                        onPress={() => router.push({
-                            pathname: '/auth/admin-exercise-details',
-                            params: { exercise: JSON.stringify(exercise) }
-                        })}
-                    >
-                        <View style={styles.exerciseHeader}>
-                            <Text style={styles.exerciseName}>{exercise.exercise_name}</Text>
-                            <Ionicons
-                                name={
-                                    exercise.video_url ? 'videocam' :
-                                    exercise.audio_url ? 'musical-notes' :
-                                    'book-outline'
-                                }
-                                size={24}
-                                color="#8B5CF6"
-                            />
-                        </View>
-                        
-                        <Text style={styles.exerciseDescription} numberOfLines={2}>
-                            {exercise.exercise_description}
-                        </Text>
-                        
-                        <View style={styles.exerciseDetails}>
-                            <View style={styles.detailItem}>
-                                <Ionicons name="time-outline" size={16} color="#666" />
-                                <Text style={styles.detailText}>
-                                    {formatDuration(exercise.time.toString())}
-                                </Text>
+            {exercises.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                    <Ionicons name="document-text-outline" size={48} color="#8B5CF6" />
+                    <Text style={styles.emptyText}>No exercises available</Text>
+                    <Text style={styles.emptySubtext}>Create a new exercise to get started</Text>
+                </View>
+            ) : (
+                <ScrollView style={styles.content}>
+                    {exercises.map((exercise) => (
+                        <TouchableOpacity
+                            key={exercise.exercise_id}
+                            style={styles.exerciseCard}
+                            onPress={() => router.push({
+                                pathname: '/auth/admin-exercise-details',
+                                params: { exercise: JSON.stringify(exercise) }
+                            })}
+                        >
+                            <View style={styles.exerciseHeader}>
+                                <Text style={styles.exerciseName}>{exercise.exercise_name}</Text>
+                                <Ionicons
+                                    name={
+                                        exercise.video_url ? 'videocam' :
+                                        exercise.audio_url ? 'musical-notes' :
+                                        'book-outline'
+                                    }
+                                    size={24}
+                                    color="#8B5CF6"
+                                />
                             </View>
                             
-                            <View style={styles.detailItem}>
-                                <Ionicons name="calendar-outline" size={16} color="#666" />
-                                <Text style={styles.detailText}>
-                                    {formatDateRange(exercise.start_time, exercise.end_time)}
-                                </Text>
-                            </View>
-
-                            {!exercise.video_url && !exercise.audio_url && (
+                            <Text style={styles.exerciseDescription} numberOfLines={2}>
+                                {exercise.exercise_description}
+                            </Text>
+                            
+                            <View style={styles.exerciseDetails}>
                                 <View style={styles.detailItem}>
-                                    <Ionicons name="book-outline" size={16} color="#666" />
-                                    <Text style={styles.detailText}>Read-through meditation</Text>
+                                    <Ionicons name="time-outline" size={16} color="#666" />
+                                    <Text style={styles.detailText}>
+                                        {formatDuration(exercise.time.toString())}
+                                    </Text>
                                 </View>
-                            )}
-                        </View>
-                    </TouchableOpacity>
-                ))}
-            </ScrollView>
+                                
+                                <View style={styles.detailItem}>
+                                    <Ionicons name="calendar-outline" size={16} color="#666" />
+                                    <Text style={styles.detailText}>
+                                        {formatDateRange(exercise.start_time, exercise.end_time)}
+                                    </Text>
+                                </View>
+
+                                {!exercise.video_url && !exercise.audio_url && (
+                                    <View style={styles.detailItem}>
+                                        <Ionicons name="book-outline" size={16} color="#666" />
+                                        <Text style={styles.detailText}>Read-through meditation</Text>
+                                    </View>
+                                )}
+                            </View>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            )}
         </View>
     );
 }
@@ -282,5 +290,23 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    emptyText: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#1a1a1a',
+        marginTop: 16,
+        marginBottom: 8,
+    },
+    emptySubtext: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
     },
 });
