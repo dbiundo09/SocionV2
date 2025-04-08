@@ -60,6 +60,9 @@ export default function ExerciseDetails() {
 
 
   const progressAnimation = useRef(new Animated.Value(0)).current;
+  const [showStreakAnimation, setShowStreakAnimation] = useState(false);
+  const streakScale = useRef(new Animated.Value(0)).current;
+  const streakOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Only attempt to load media if there's a video or audio URL
@@ -245,6 +248,33 @@ export default function ExerciseDetails() {
     });
   };
 
+  const startStreakAnimation = () => {
+    setShowStreakAnimation(true);
+    Animated.parallel([
+      Animated.spring(streakScale, {
+        toValue: 1,
+        useNativeDriver: true,
+        friction: 5,
+      }),
+      Animated.timing(streakOpacity, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setTimeout(() => {
+        Animated.timing(streakOpacity, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }).start(() => {
+          setShowStreakAnimation(false);
+          streakScale.setValue(0);
+        });
+      }, 2000);
+    });
+  };
+
   const renderMediaPlayer = () => {
     if (mediaError) {
       return (
@@ -329,9 +359,11 @@ export default function ExerciseDetails() {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { justifyContent: 'space-between' }]}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={28} color="#6b5b9e" />
-        </TouchableOpacity>
+        {(!isComplete || exerciseData.completed) && (
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={28} color="#6b5b9e" />
+          </TouchableOpacity>
+        )}
         
         <View style={[styles.logoContainer]}>
           <Text style={[styles.logoText]}>om</Text>
@@ -442,6 +474,25 @@ export default function ExerciseDetails() {
           </TouchableOpacity>
         )}
 
+        {/* Streak Animation */}
+        {showStreakAnimation && (
+          <Animated.View 
+            style={[
+              styles.streakContainer,
+              {
+                transform: [{ scale: streakScale }],
+                opacity: streakOpacity,
+              }
+            ]}
+          >
+            <View style={styles.streakContent}>
+              <Ionicons name="flame" size={40} color="#FF6B6B" />
+              <Text style={styles.streakText}>+1 Streak!</Text>
+              <Text style={styles.streakSubtext}>You're heating up!</Text>
+            </View>
+          </Animated.View>
+        )}
+
         {/* Done button - Show after completion */}
         {isComplete && !exerciseData.completed && (
           <TouchableOpacity 
@@ -449,9 +500,17 @@ export default function ExerciseDetails() {
             onPress={async () => {
               try {
                 if (exerciseData.exercise_id) {
-                  await markCompleted(exerciseData.exercise_id);
+                  const response = await markCompleted(exerciseData.exercise_id);
+                  if (response?.streak_changed) {
+                    startStreakAnimation();
+                    // Wait for animation to complete before navigating back
+                    setTimeout(() => {
+                      router.back();
+                    }, 3000);
+                  } else {
+                    router.back();
+                  }
                 }
-                router.back();
               } catch (error) {
                 console.error('Error marking exercise as complete:', error);
               }
@@ -669,5 +728,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b5b9e',
     marginTop: 8,
+  },
+  streakContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    zIndex: 1000,
+  },
+  streakContent: {
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  streakText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FF6B6B',
+    marginTop: 10,
+  },
+  streakSubtext: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 5,
   },
 });
