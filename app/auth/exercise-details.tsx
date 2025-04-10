@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Text, 
-  View, 
-  StyleSheet, 
-  TouchableOpacity, 
+import {
+  Text,
+  View,
+  StyleSheet,
+  TouchableOpacity,
   Dimensions,
   Animated,
   Easing,
@@ -54,12 +54,12 @@ export default function ExerciseDetails() {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const videoRef = useRef<Video>(null);
   const audioRef = useRef<Audio.Sound | null>(null);
-  
+
   // Animation values for ripple effect
   const scale = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(1)).current;
   const rippleScale = useRef(new Animated.Value(1)).current;
-  
+
   // Create particle animation values
   const particles = Array.from({ length: NUM_PARTICLES }).map(() => ({
     position: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
@@ -86,7 +86,7 @@ export default function ExerciseDetails() {
     if (exerciseData?.video_url || exerciseData?.audio_url) {
       loadMedia();
     }
-    
+
     return () => {
       // Cleanup media resources
       if (audioRef.current) {
@@ -100,14 +100,14 @@ export default function ExerciseDetails() {
 
   const loadMedia = async () => {
     if (!exerciseData?.exercise_id) return;
-    
+
     try {
       setIsLoadingMedia(true);
       setMediaError(null);
       setLoadingProgress(0);
 
       const media = await getMedia(exerciseData.exercise_id);
-      
+
       if (!media || !media.content) {
         throw new Error('No media content received');
       }
@@ -119,7 +119,7 @@ export default function ExerciseDetails() {
         ...media,
         content: mediaUrl
       });
-      
+
       // If it's audio, prepare the sound
       if (media.media_type.startsWith('audio/')) {
         const { sound } = await Audio.Sound.createAsync(
@@ -148,7 +148,7 @@ export default function ExerciseDetails() {
 
   const togglePlayPause = async () => {
     if (isLoadingMedia) return; // Prevent playback while loading
-    
+
     if (!hasStarted) {
       setHasStarted(true);
     }
@@ -179,7 +179,7 @@ export default function ExerciseDetails() {
   // Create ripple animation
   const startRippleAnimation = () => {
     setIsComplete(true);
-    
+
     // Fill animation
     Animated.timing(scale, {
       toValue: 1,
@@ -187,7 +187,7 @@ export default function ExerciseDetails() {
       useNativeDriver: true,
       easing: Easing.out(Easing.ease),
     }).start();
-    
+
     // Create repeated ripple effect
     Animated.loop(
       Animated.sequence([
@@ -209,7 +209,7 @@ export default function ExerciseDetails() {
       // After ripple completes, start particle explosion
       setShowParticles(true);
       startParticleAnimation();
-      
+
       // Fade out the circle
       Animated.timing(opacity, {
         toValue: 0,
@@ -218,14 +218,14 @@ export default function ExerciseDetails() {
       }).start();
     });
   };
-  
+
   // Create the particle explosion animation
   const startParticleAnimation = () => {
     // Animate each particle
     particles.forEach(particle => {
       const targetX = Math.cos(particle.angle) * particle.distance;
       const targetY = Math.sin(particle.angle) * particle.distance;
-      
+
       // Create a sequence of animations for this particle
       Animated.sequence([
         // Delay based on particle
@@ -381,7 +381,7 @@ export default function ExerciseDetails() {
             <Ionicons name="arrow-back" size={28} color="#6b5b9e" />
           </TouchableOpacity>
         )}
-        
+
         <View style={[styles.logoContainer]}>
           <Text style={[styles.logoText]}>om</Text>
         </View>
@@ -389,7 +389,7 @@ export default function ExerciseDetails() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollContainer}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -399,7 +399,7 @@ export default function ExerciseDetails() {
           <View style={styles.timerContainer}>
             {/* Purple fill circle that shows on completion */}
             {isComplete && (
-              <Animated.View 
+              <Animated.View
                 style={[
                   styles.completionCircle,
                   {
@@ -409,10 +409,10 @@ export default function ExerciseDetails() {
                     opacity: opacity,
                     backgroundColor: '#6b5b9e',
                   }
-                ]} 
+                ]}
               />
             )}
-            
+
             {/* Particles for explosion effect */}
             {showParticles && particles.map((particle, index) => (
               <Animated.View
@@ -429,16 +429,18 @@ export default function ExerciseDetails() {
                       { translateX: particle.position.x },
                       { translateY: particle.position.y },
                       { scale: particle.scale },
-                      { rotate: particle.rotation.interpolate({
-                        inputRange: [-1, 1],
-                        outputRange: ['-360deg', '360deg']
-                      })}
+                      {
+                        rotate: particle.rotation.interpolate({
+                          inputRange: [-1, 1],
+                          outputRange: ['-360deg', '360deg']
+                        })
+                      }
                     ],
                   }
                 ]}
               />
             ))}
-          
+
             <CountdownCircleTimer
               isPlaying={isPlaying}
               duration={exerciseData.time}
@@ -455,7 +457,7 @@ export default function ExerciseDetails() {
             >
               {({ remainingTime }) => (
                 !hasStarted ? (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.playButton}
                     onPress={togglePlayPause}
                   >
@@ -479,21 +481,21 @@ export default function ExerciseDetails() {
 
         {/* Control Button - Only show after meditation has started and not completed */}
         {hasStarted && !isComplete && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.controlButton}
             onPress={togglePlayPause}
           >
-            <Ionicons 
-              name={isPlaying ? "pause" : "play"} 
-              size={24} 
-              color="white" 
+            <Ionicons
+              name={isPlaying ? "pause" : "play"}
+              size={24}
+              color="white"
             />
           </TouchableOpacity>
         )}
 
         {/* Streak Animation */}
         {showStreakAnimation && (
-          <Animated.View 
+          <Animated.View
             style={[
               styles.streakContainer,
               {
@@ -512,7 +514,7 @@ export default function ExerciseDetails() {
 
         {/* Done button - Show after completion */}
         {isComplete && !exerciseData.completed && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.doneButton}
             onPress={async () => {
               try {
@@ -562,7 +564,7 @@ const styles = StyleSheet.create({
     height: 40,
   },
   logoText: {
-    fontSize: 30, 
+    fontSize: 30,
     color: '#6b5b9e',
   },
   timerSection: {
