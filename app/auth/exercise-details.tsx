@@ -23,6 +23,23 @@ const { width } = Dimensions.get('window');
 const CIRCLE_SIZE = width * 0.8;
 const NUM_PARTICLES = 20; // Number of particles for the explosion effect
 
+const STREAK_MESSAGES = [
+  "Keep that streak alive! ⚡️",
+  "On fire! 🌟",
+  "You're crushing it! 💪",
+  "Unstoppable! 🚀",
+  "The streak continues! 🔥",
+  "You're on a roll! 🎯",
+  "Nothing can stop you! 💫",
+  "Keep the momentum going! ⚡️",
+  "You're a meditation machine! 🧘‍♂️",
+  "The streak is strong with you! ✨"
+];
+
+const getRandomStreakMessage = () => {
+  return STREAK_MESSAGES[Math.floor(Math.random() * STREAK_MESSAGES.length)];
+};
+
 export default function ExerciseDetails() {
   const router = useRouter();
   const { exercise } = useLocalSearchParams<{ exercise: string }>();
@@ -488,7 +505,7 @@ export default function ExerciseDetails() {
             <View style={styles.streakContent}>
               <Ionicons name="flame" size={40} color="#FF6B6B" />
               <Text style={styles.streakText}>+1 Streak!</Text>
-              <Text style={styles.streakSubtext}>You're heating up!</Text>
+              <Text style={styles.streakSubtext}>{getRandomStreakMessage()}</Text>
             </View>
           </Animated.View>
         )}

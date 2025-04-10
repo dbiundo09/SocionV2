@@ -3,7 +3,11 @@ import { handleUnauthorizedError } from '@/services/authServices/handleUnauthori
 
 const apiUrl: string = process.env.API_URL || 'http://localhost:8000';
 
-const markCompleted = async (exerciseId: string): Promise<void> => {
+interface MarkCompletedResponse {
+  streak_changed: boolean;
+}
+
+const markCompleted = async (exerciseId: string): Promise<MarkCompletedResponse> => {
   try {
     const token = await auth().currentUser?.getIdToken();
     if (!token) {
@@ -21,7 +25,7 @@ const markCompleted = async (exerciseId: string): Promise<void> => {
 
     if (response.status === 401) {
         handleUnauthorizedError(response);
-        return;
+        return { streak_changed: false };
     }
 
     if (!response.ok) {
