@@ -38,7 +38,6 @@ export default async function getExercises(classId?: string): Promise<ExerciseLi
         }
 
         const data: ExerciseListResponse = await response.json();
-        console.log(data);
         return data;
     } catch (error) {
         console.error('Error fetching exercises:', error);

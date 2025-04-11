@@ -16,7 +16,8 @@ import { CountdownCircleTimer } from 'react-native-countdown-circle-timer';
 import { Exercise } from '@/app/types/exercise';
 import getMedia from '@/services/userServices/getMedia';
 import markCompleted from '@/services/userServices/markCompleted';
-import { Video, ResizeMode } from 'expo-av';
+import { useEvent } from 'expo';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { Audio } from 'expo-av';
 
 const { width } = Dimensions.get('window');
@@ -52,8 +53,14 @@ export default function ExerciseDetails() {
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
-  const videoRef = useRef<Video>(null);
   const audioRef = useRef<Audio.Sound | null>(null);
+
+  // Video player setup
+  const player = useVideoPlayer(mediaData?.content || '', player => {
+    player.loop = true;
+  });
+
+  const { isPlaying: videoIsPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
 
   // Animation values for ripple effect
   const scale = useRef(new Animated.Value(0)).current;
@@ -92,9 +99,6 @@ export default function ExerciseDetails() {
       if (audioRef.current) {
         audioRef.current.unloadAsync();
       }
-      if (videoRef.current) {
-        videoRef.current.unloadAsync();
-      }
     };
   }, []);
 
@@ -102,23 +106,27 @@ export default function ExerciseDetails() {
     if (!exerciseData?.exercise_id) return;
 
     try {
+      console.log("Loading media");
       setIsLoadingMedia(true);
       setMediaError(null);
       setLoadingProgress(0);
 
       const media = await getMedia(exerciseData.exercise_id);
-
+      console.log("Media data received");
+      console.log("Media:", media);
       if (!media || !media.content) {
         throw new Error('No media content received');
       }
 
       // Ensure the URL is properly formatted
       const mediaUrl = media.content.startsWith('http') ? media.content : `https://${media.content}`;
+      console.log('Media URL:', mediaUrl);
 
       setMediaData({
         ...media,
         content: mediaUrl
       });
+      console.log("Media data set:", media);
 
       // If it's audio, prepare the sound
       if (media.media_type.startsWith('audio/')) {
@@ -128,11 +136,10 @@ export default function ExerciseDetails() {
         );
         audioRef.current = sound;
       }
-
+      console.log("Media loaded successfully");
       setIsLoadingMedia(false);
     } catch (error: any) {
       console.error('Error loading media:', error);
-      // Only set error if it's not a 404 (no media found)
       if (error?.response?.status !== 404) {
         setMediaError('Failed to load media');
       }
@@ -147,22 +154,24 @@ export default function ExerciseDetails() {
   };
 
   const togglePlayPause = async () => {
-    if (isLoadingMedia) return; // Prevent playback while loading
+    if (isLoadingMedia) return;
 
     if (!hasStarted) {
       setHasStarted(true);
+      // Start video playback when timer starts
+      if (mediaData?.media_type.startsWith('video/')) {
+        player.play();
+      }
     }
     setIsPlaying(!isPlaying);
 
     // Handle media playback
     if (mediaData) {
       if (mediaData.media_type.startsWith('video/')) {
-        if (videoRef.current) {
-          if (isPlaying) {
-            await videoRef.current.pauseAsync();
-          } else {
-            await videoRef.current.playAsync();
-          }
+        if (isPlaying) {
+          player.pause();
+        } else {
+          player.play();
         }
       } else if (mediaData.media_type.startsWith('audio/')) {
         if (audioRef.current) {
@@ -302,30 +311,6 @@ export default function ExerciseDetails() {
     }
 
     if (mediaData) {
-      if (mediaData.media_type.startsWith('video/')) {
-        return (
-          <View style={styles.mediaContainer}>
-            <Video
-              ref={videoRef}
-              source={{ uri: mediaData.content }}
-              style={styles.video}
-              useNativeControls
-              resizeMode={ResizeMode.CONTAIN}
-              isLooping
-              onError={(error) => {
-                console.error('Video playback error:', error);
-                setMediaError('Failed to play video');
-              }}
-              onLoad={() => {
-                console.log('Video loaded successfully');
-              }}
-              shouldPlay={false}
-              isMuted={false}
-            />
-          </View>
-        );
-      }
-
       if (mediaData.media_type.startsWith('audio/')) {
         return (
           <View style={styles.mediaContainer}>
@@ -394,6 +379,18 @@ export default function ExerciseDetails() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Media Player */}
+        {mediaData?.media_type.startsWith('video/') && (
+          <View style={styles.videoContainer}>
+            <VideoView 
+              style={styles.video} 
+              player={player} 
+              allowsFullscreen 
+              allowsPictureInPicture 
+            />
+          </View>
+        )}
+
         {/* Timer Circle */}
         <View style={styles.timerSection}>
           <View style={styles.timerContainer}>
@@ -445,7 +442,7 @@ export default function ExerciseDetails() {
               isPlaying={isPlaying}
               duration={exerciseData.time}
               colors="#6b5b9e"
-              size={CIRCLE_SIZE}
+              size={mediaData?.media_type.startsWith('video/') ? CIRCLE_SIZE * 0.6 : CIRCLE_SIZE}
               strokeWidth={15}
               trailColor="#e6e6e6"
               rotation="counterclockwise"
@@ -476,7 +473,7 @@ export default function ExerciseDetails() {
           </View>
         </View>
 
-        {/* Media Player */}
+        {/* Audio Player or Description */}
         {renderMediaPlayer()}
 
         {/* Control Button - Only show after meditation has started and not completed */}
@@ -664,11 +661,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
   },
+  videoContainer: {
+    width: '100%',
+    aspectRatio: 16/9,
+    marginBottom: 20,
+  },
   video: {
-    width: width - 40,
-    height: 200,
-    borderRadius: 12,
-    backgroundColor: '#000', // Add background color for video container
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#000',
   },
   audioPlayer: {
     width: width - 40,
@@ -782,3 +783,4 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 });
+

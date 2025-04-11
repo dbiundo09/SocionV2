@@ -10,8 +10,6 @@ export default async function removeStudent(userId: string, classId: string) {
             throw new Error('No authentication token found');
         }
 
-        console.log("Printing email and classId");
-        console.log(userId, classId);
 
         const response = await fetch(`${apiUrl}/admin/removeStudent`, {
             method: 'DELETE',
